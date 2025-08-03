@@ -114,7 +114,7 @@ function PreProFolioApp() {
     };
     
     // Apply different background for login screen
-    const backgroundClass = !user && !loading ? 'bg-gradient-to-br from-gray-50 to-blue-100 dark:from-gray-900 dark:to-blue-900' : 'bg-gray-50 dark:bg-gray-900';
+    const backgroundClass = !user && !loading ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800';
 
     return (
         <div className={`min-h-screen font-sans ${backgroundClass} text-gray-800 dark:text-gray-200 transition-colors duration-300`}>
@@ -148,9 +148,11 @@ const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) =
     return (
         <>
             {user || isGuest ? <Header darkMode={darkMode} setDarkMode={toggleDarkMode} onSignOut={handleSignOut} showSignOut={!!user || isGuest} setCurrentPage={setCurrentPage} /> : null}
-            <main className="p-4 sm:p-6 lg:p-8">
+            <main>
                 {user || isGuest ? (
-                    currentPage === 'dashboard' ? <Dashboard isGuest={isGuest} /> : <SettingsPage setCurrentPage={setCurrentPage} />
+                    <div className="p-4 sm:p-6 lg:p-8">
+                        {currentPage === 'dashboard' ? <Dashboard isGuest={isGuest} /> : <SettingsPage setCurrentPage={setCurrentPage} />}
+                    </div>
                 ) : <LoginScreen onGuestLogin={() => setIsGuest(true)} />}
             </main>
         </>
@@ -210,26 +212,94 @@ const LoginScreen = ({ onGuestLogin }) => {
         }
     };
 
+    const features = [
+        {
+            icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+            title: "Effortless Hour Logging",
+            description: "Quickly log single or recurring entries for all your pre-health activities, from patient care to research."
+        },
+        {
+            icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
+            title: "Visualize Your Progress",
+            description: "Set goals for each category and watch your progress with intuitive charts and dynamic progress bars."
+        },
+        {
+            icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
+            title: "Powerful Search & Filter",
+            description: "Instantly find any entry with advanced search and filtering by category, keyword, or date range."
+        }
+    ];
+
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen text-center px-4">
-            <div className="w-full max-w-md p-8 space-y-6 bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl shadow-2xl">
-                <div className="flex flex-col items-center space-y-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                    </svg>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">PreProFolio</h1>
+        <div className="w-full bg-white dark:bg-gray-900">
+            <style>{`
+                .animated-gradient {
+                    background-size: 400%;
+                    -webkit-animation: animation 10s ease infinite;
+                    -moz-animation: animation 10s ease infinite;
+                    animation: animation 10s ease infinite;
+                }
+
+                @keyframes animation {
+                    0%, 100% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                }
+            `}</style>
+            <div className="relative isolate px-6 pt-14 lg:px-8 bg-gradient-to-r from-blue-100 via-teal-100 to-violet-100 dark:from-blue-900/30 dark:via-teal-900/30 dark:to-violet-900/30 animated-gradient">
+                <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
+                    <div className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#80ff89] to-[#0077ff] opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" style={{clipPath: 'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)'}}></div>
                 </div>
-                <p className="text-gray-600 dark:text-gray-300">Your digital logbook for the journey to professional school. Track hours, set goals, and stay organized.</p>
-                <div className="space-y-4 pt-4">
-                    <button onClick={handleSignIn} className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105 duration-300">
-                        <svg className="w-6 h-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C42.012 35.836 44 30.138 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
-                        Sign In with Google
-                    </button>
-                    <button onClick={onGuestLogin} className="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105 duration-300">
-                        Continue as Guest
-                    </button>
+
+                <div className="mx-auto max-w-2xl py-32 sm:py-48 lg:py-56">
+                    <div className="text-center">
+                        <div className="flex justify-center items-center gap-4 mb-8">
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                            </svg>
+                            <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-6xl">PreProFolio</h1>
+                        </div>
+                        <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">The smart, secure, and simple way for pre-health students to track their experience hours and prepare for professional school.</p>
+                        <div className="mt-10 flex items-center justify-center gap-x-6">
+                           <button onClick={handleSignIn} className="flex items-center justify-center rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+                                <svg className="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C42.012 35.836 44 30.138 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+                                Sign In with Google
+                            </button>
+                            <button onClick={onGuestLogin} className="text-sm font-semibold leading-6 text-gray-900 dark:text-white">Try the Demo <span aria-hidden="true">→</span></button>
+                        </div>
+                    </div>
                 </div>
             </div>
+            <div className="bg-gray-50 dark:bg-gray-800 py-24 sm:py-32">
+                <div className="mx-auto max-w-7xl px-6 lg:px-8">
+                    <div className="mx-auto max-w-2xl lg:text-center">
+                        <h2 className="text-base font-semibold leading-7 text-blue-600 dark:text-blue-400">Built for Your Journey</h2>
+                        <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">Everything you need to stay organized</p>
+                        <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">Stop wrestling with spreadsheets. PreProFolio is designed from the ground up to make tracking your hours simple, so you can focus on what matters most: gaining experience.</p>
+                    </div>
+                    <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-4xl">
+                        <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-10 lg:max-w-none lg:grid-cols-2 lg:gap-y-16">
+                            {features.map((feature) => (
+                                <div key={feature.title} className="relative pl-16">
+                                    <dt className="text-base font-semibold leading-7 text-gray-900 dark:text-white">
+                                        <div className="absolute left-0 top-0 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20">
+                                            {feature.icon}
+                                        </div>
+                                        {feature.title}
+                                    </dt>
+                                    <dd className="mt-2 text-base leading-7 text-gray-600 dark:text-gray-300">{feature.description}</dd>
+                                </div>
+                            ))}
+                        </dl>
+                    </div>
+                </div>
+            </div>
+             <footer className="bg-white dark:bg-gray-900">
+                <div className="mx-auto max-w-7xl px-6 py-12 md:flex md:items-center md:justify-between lg:px-8">
+                    <div className="mt-8 md:mt-0 md:order-1">
+                        <p className="text-center text-xs leading-5 text-gray-500">&copy; {new Date().getFullYear()} PreProFolio. All rights reserved.</p>
+                    </div>
+                </div>
+            </footer>
         </div>
     );
 };
@@ -254,7 +324,6 @@ const Dashboard = ({ isGuest }) => {
     const [loading, setLoading] = useState(true);
     const [isExperienceModalOpen, setIsExperienceModalOpen] = useState(false);
     const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
-    const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
     const [editingExperience, setEditingExperience] = useState(null);
     const [filterCategory, setFilterCategory] = useState('All');
     const [searchTerm, setSearchTerm] = useState('');
@@ -336,8 +405,20 @@ const Dashboard = ({ isGuest }) => {
         const searchTermMatch = searchTerm === '' || 
                                 (exp.location && exp.location.toLowerCase().includes(searchTerm.toLowerCase())) || 
                                 (exp.notes && exp.notes.toLowerCase().includes(searchTerm.toLowerCase()));
-        const startDateMatch = dateRange.start === '' || exp.date.toDate() >= new Date(dateRange.start);
-        const endDateMatch = dateRange.end === '' || exp.date.toDate() <= new Date(dateRange.end);
+        
+        let startDateMatch = true;
+        if (dateRange.start) {
+            const start = new Date(dateRange.start);
+            start.setHours(0, 0, 0, 0);
+            startDateMatch = exp.date.toDate() >= start;
+        }
+
+        let endDateMatch = true;
+        if (dateRange.end) {
+            const end = new Date(dateRange.end);
+            end.setHours(23, 59, 59, 999);
+            endDateMatch = exp.date.toDate() <= end;
+        }
 
         return categoryMatch && searchTermMatch && startDateMatch && endDateMatch;
     });
@@ -355,11 +436,8 @@ const Dashboard = ({ isGuest }) => {
                     <button onClick={() => setIsGoalModalOpen(true)} className="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
                         Set Goals
                     </button>
-                    <button onClick={() => setIsBulkAddModalOpen(true)} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
-                        Bulk Add
-                    </button>
                     <button onClick={() => { setEditingExperience(null); setIsExperienceModalOpen(true); }} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
-                        Log New
+                        Log Experience
                     </button>
                 </div>
             </div>
@@ -393,14 +471,6 @@ const Dashboard = ({ isGuest }) => {
                     onClose={() => setIsGoalModalOpen(false)}
                     onSuccess={handleGoalsSaved}
                     currentGoals={goals}
-                    isGuest={isGuest}
-                />
-            )}
-            {isBulkAddModalOpen && (
-                <BulkAddModal
-                    isOpen={isBulkAddModalOpen}
-                    onClose={() => setIsBulkAddModalOpen(false)}
-                    onSuccess={() => setIsBulkAddModalOpen(false)} // onSnapshot will update the UI
                     isGuest={isGuest}
                 />
             )}
@@ -603,8 +673,15 @@ const ExperienceModal = ({ isOpen, onClose, onSuccess, experience, isGuest }) =>
         location: '',
         notes: ''
     });
+    const [isRecurring, setIsRecurring] = useState(false);
+    const [recurringData, setRecurringData] = useState({
+        endDate: '',
+        frequency: 'Daily',
+        daysOfWeek: { Sun: false, Mon: false, Tue: false, Wed: false, Thu: false, Fri: false, Sat: false }
+    });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const categories = ['Patient Care Experience', 'Healthcare Experience', 'Research', 'Shadowing', 'Volunteer Work', 'Other'];
 
     useEffect(() => {
         if (experience) {
@@ -633,6 +710,18 @@ const ExperienceModal = ({ isOpen, onClose, onSuccess, experience, isGuest }) =>
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
+    
+    const handleRecurringChange = (e) => {
+        const { name, value } = e.target;
+        setRecurringData(prev => ({ ...prev, [name]: value }));
+    };
+    
+    const handleDayToggle = (day) => {
+        setRecurringData(prev => ({
+            ...prev,
+            daysOfWeek: { ...prev.daysOfWeek, [day]: !prev.daysOfWeek[day] }
+        }));
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -640,50 +729,80 @@ const ExperienceModal = ({ isOpen, onClose, onSuccess, experience, isGuest }) =>
             setError('Hours must be a positive number.');
             return;
         }
+        if (isRecurring && !recurringData.endDate) {
+            setError('End date is required for recurring entries.');
+            return;
+        }
         setError('');
         setIsSubmitting(true);
 
-        const dataToSave = {
-            ...formData,
-            hours: parseFloat(formData.hours),
-        };
-
-        if (isGuest) {
-            onSuccess(dataToSave);
-            setIsSubmitting(false);
-            return;
-        }
+        const batch = writeBatch(db);
         
-        const finalData = {
-             ...dataToSave,
-             date: new Date(dataToSave.date),
-             userId: user.uid,
+        if (isRecurring) {
+            let currentDate = new Date(formData.date + 'T00:00:00'); // Avoid timezone issues
+            const lastDate = new Date(recurringData.endDate + 'T00:00:00');
+            const selectedDays = Object.keys(recurringData.daysOfWeek).map((day, index) => recurringData.daysOfWeek[day] ? index : -1).filter(index => index !== -1);
+
+            while (currentDate <= lastDate) {
+                let shouldAdd = false;
+                if (recurringData.frequency === 'Daily') {
+                    shouldAdd = true;
+                } else if (recurringData.frequency === 'Weekly') {
+                    if (selectedDays.includes(currentDate.getDay())) {
+                         shouldAdd = true;
+                    }
+                } else if (recurringData.frequency === 'Bi-Weekly') {
+                    const weekDiff = Math.floor((currentDate - new Date(formData.date + 'T00:00:00')) / (1000 * 60 * 60 * 24 * 7));
+                    if (weekDiff % 2 === 0 && selectedDays.includes(currentDate.getDay())) {
+                        shouldAdd = true;
+                    }
+                }
+
+                if (shouldAdd) {
+                    const newDocRef = doc(collection(db, "experiences"));
+                    batch.set(newDocRef, {
+                        ...formData,
+                        hours: parseFloat(formData.hours),
+                        date: new Date(currentDate),
+                        userId: user.uid,
+                        createdAt: serverTimestamp(),
+                    });
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+        } else {
+             const finalData = {
+                 ...formData,
+                 hours: parseFloat(formData.hours),
+                 date: new Date(formData.date),
+                 userId: user.uid,
+            }
+            if (experience) {
+                const docRef = doc(db, 'experiences', experience.id);
+                batch.update(docRef, { ...finalData, updatedAt: serverTimestamp() });
+            } else {
+                const newDocRef = doc(collection(db, "experiences"));
+                batch.set(newDocRef, { ...finalData, createdAt: serverTimestamp() });
+            }
         }
 
         try {
-            if (experience) {
-                const docRef = doc(db, 'experiences', experience.id);
-                await updateDoc(docRef, { ...finalData, updatedAt: serverTimestamp() });
-            } else {
-                await addDoc(collection(db, 'experiences'), { ...finalData, createdAt: serverTimestamp() });
-            }
+            await batch.commit();
             onSuccess();
         } catch (err) {
-            console.error("Error saving experience:", err);
-            setError("Failed to save experience. Please try again.");
+            console.error("Error saving experience(s):", err);
+            setError("Failed to save. Please try again.");
         } finally {
             setIsSubmitting(false);
         }
     };
-
-    const categories = ['Patient Care Experience', 'Healthcare Experience', 'Research', 'Shadowing', 'Volunteer Work', 'Other'];
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">
                 <form onSubmit={handleSubmit} className="p-6">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{experience ? 'Edit' : 'Log New'} Experience</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{experience ? 'Edit' : 'Log'} Experience</h2>
                         <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
@@ -692,30 +811,71 @@ const ExperienceModal = ({ isOpen, onClose, onSuccess, experience, isGuest }) =>
                     {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
                     <div className="space-y-4">
+                        {/* Standard Fields */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block mb-2 text-sm font-medium">Date</label>
+                                <input type="date" name="date" value={formData.date} onChange={handleChange} required className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                            </div>
+                            <div>
+                                <label className="block mb-2 text-sm font-medium">Hours</label>
+                                <input type="number" name="hours" value={formData.hours} onChange={handleChange} step="0.1" min="0" required placeholder="e.g., 8.5" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                            </div>
+                        </div>
                         <div>
-                            <label htmlFor="category" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Category</label>
-                            <select id="category" name="category" value={formData.category} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            <label className="block mb-2 text-sm font-medium">Category</label>
+                            <select name="category" value={formData.category} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
                                 {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                             </select>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label htmlFor="date" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Date</label>
-                                <input type="date" id="date" name="date" value={formData.date} onChange={handleChange} required className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
-                            </div>
-                            <div>
-                                <label htmlFor="hours" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Total Hours</label>
-                                <input type="number" id="hours" name="hours" value={formData.hours} onChange={handleChange} step="0.1" min="0" required placeholder="e.g., 8.5" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
-                            </div>
+                         <div>
+                            <label className="block mb-2 text-sm font-medium">Location / Organization</label>
+                            <input type="text" name="location" value={formData.location} onChange={handleChange} required placeholder="e.g., City General Hospital" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
                         </div>
                         <div>
-                            <label htmlFor="location" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Location / Organization</label>
-                            <input type="text" id="location" name="location" value={formData.location} onChange={handleChange} required placeholder="e.g., City General Hospital" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                            <label className="block mb-2 text-sm font-medium">Notes / Reflections</label>
+                            <textarea name="notes" value={formData.notes} onChange={handleChange} rows="3" placeholder="Describe your responsibilities..." className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600"></textarea>
                         </div>
-                        <div>
-                            <label htmlFor="notes" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Notes / Reflections</label>
-                            <textarea id="notes" name="notes" value={formData.notes} onChange={handleChange} rows="4" placeholder="Describe your responsibilities and what you learned..." className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
-                        </div>
+                        
+                        {/* Recurring Entry Toggle */}
+                        {!experience && (
+                            <div className="flex items-center pt-2">
+                                <input id="isRecurring" type="checkbox" checked={isRecurring} onChange={(e) => setIsRecurring(e.target.checked)} className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                                <label htmlFor="isRecurring" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">This is a recurring entry</label>
+                            </div>
+                        )}
+
+                        {/* Recurring Fields */}
+                        {isRecurring && (
+                            <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg space-y-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block mb-2 text-sm font-medium">End Date</label>
+                                        <input type="date" name="endDate" value={recurringData.endDate} onChange={handleRecurringChange} required className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                                    </div>
+                                    <div>
+                                        <label className="block mb-2 text-sm font-medium">Frequency</label>
+                                        <select name="frequency" value={recurringData.frequency} onChange={handleRecurringChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
+                                            <option>Daily</option>
+                                            <option>Weekly</option>
+                                            <option>Bi-Weekly</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                {(recurringData.frequency === 'Weekly' || recurringData.frequency === 'Bi-Weekly') && (
+                                    <div>
+                                        <label className="block mb-2 text-sm font-medium">Repeat on</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {Object.keys(recurringData.daysOfWeek).map(day => (
+                                                <button type="button" key={day} onClick={() => handleDayToggle(day)} className={`px-3 py-1 text-sm rounded-full ${recurringData.daysOfWeek[day] ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>
+                                                    {day}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className="mt-6 flex justify-end gap-4">
@@ -723,101 +883,7 @@ const ExperienceModal = ({ isOpen, onClose, onSuccess, experience, isGuest }) =>
                             Cancel
                         </button>
                         <button type="submit" disabled={isSubmitting} className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:bg-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800 dark:disabled:bg-blue-400">
-                            {isSubmitting ? 'Saving...' : 'Save Experience'}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-};
-
-const GoalModal = ({ isOpen, onClose, onSuccess, currentGoals, isGuest }) => {
-    const { user } = useAuth();
-    const categories = ['Patient Care Experience', 'Healthcare Experience', 'Research', 'Shadowing', 'Volunteer Work', 'Other'];
-    const [goals, setGoals] = useState({});
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-    useEffect(() => {
-        const initialGoals = categories.reduce((acc, cat) => {
-            acc[cat] = currentGoals[cat] || '';
-            return acc;
-        }, {});
-        setGoals(initialGoals);
-    }, [currentGoals]);
-
-    if (!isOpen) return null;
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setGoals(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-        
-        const goalsToSave = Object.entries(goals).reduce((acc, [key, value]) => {
-            acc[key] = parseInt(value, 10) || 0;
-            return acc;
-        }, {});
-
-        if (isGuest) {
-            console.log("Guest goals would be saved locally:", goalsToSave);
-            onSuccess();
-            setIsSubmitting(false);
-            return;
-        }
-
-        try {
-            const goalDocRef = doc(db, "goals", user.uid);
-            await setDoc(goalDocRef, goalsToSave, { merge: true });
-            onSuccess();
-        } catch (error) {
-            console.error("Error saving goals:", error);
-            alert("Failed to save goals. Please try again.");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">
-                <form onSubmit={handleSubmit} className="p-6">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Set Your Hour Goals</h2>
-                        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
-                    </div>
-                    
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Set a target number of hours for each category to track your progress.</p>
-
-                    <div className="space-y-4">
-                        {categories.map(cat => (
-                             <div key={cat}>
-                                <label htmlFor={cat} className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">{cat}</label>
-                                <input 
-                                    type="number" 
-                                    id={cat} 
-                                    name={cat}
-                                    value={goals[cat]}
-                                    onChange={handleChange}
-                                    min="0"
-                                    placeholder="e.g., 200" 
-                                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
-                                />
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="mt-6 flex justify-end gap-4">
-                        <button type="button" onClick={onClose} className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">
-                            Cancel
-                        </button>
-                        <button type="submit" disabled={isSubmitting} className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:bg-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800 dark:disabled:bg-blue-400">
-                            {isSubmitting ? 'Saving...' : 'Save Goals'}
+                            {isSubmitting ? 'Saving...' : 'Save'}
                         </button>
                     </div>
                 </form>
@@ -895,122 +961,6 @@ const SettingsPage = ({ setCurrentPage }) => {
                     <div className="flex justify-end">
                         <button type="submit" disabled={isSaving} className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
                             {isSaving ? 'Saving...' : 'Save Profile'}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-};
-
-const BulkAddModal = ({ isOpen, onClose, onSuccess, isGuest }) => {
-    const { user } = useAuth();
-    const [formData, setFormData] = useState({
-        category: 'Patient Care Experience',
-        hours: '',
-        location: '',
-        notes: '',
-        startDate: '',
-        endDate: '',
-    });
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState('');
-    const categories = ['Patient Care Experience', 'Healthcare Experience', 'Research', 'Shadowing', 'Volunteer Work', 'Other'];
-
-    if (!isOpen) return null;
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        const { category, hours, location, startDate, endDate } = formData;
-        if (!hours || hours <= 0 || !startDate || !endDate) {
-            setError('Please fill out all required fields.');
-            return;
-        }
-        setError('');
-        setIsSubmitting(true);
-
-        const batch = writeBatch(db);
-        let currentDate = new Date(startDate);
-        const lastDate = new Date(endDate);
-
-        while (currentDate <= lastDate) {
-            const newDocRef = doc(collection(db, "experiences"));
-            batch.set(newDocRef, {
-                category,
-                hours: parseFloat(hours),
-                location,
-                notes: formData.notes,
-                date: new Date(currentDate),
-                userId: user.uid,
-                createdAt: serverTimestamp(),
-            });
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-
-        try {
-            await batch.commit();
-            onSuccess();
-        } catch (err) {
-            console.error("Error saving bulk experiences:", err);
-            setError("Failed to save experiences. Please try again.");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-    
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">
-                <form onSubmit={handleSubmit} className="p-6">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Bulk Add Experiences</h2>
-                        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
-                    </div>
-                    
-                    {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label htmlFor="startDate" className="block mb-2 text-sm font-medium">Start Date</label>
-                                <input type="date" id="startDate" name="startDate" value={formData.startDate} onChange={handleChange} required className="input-field" />
-                            </div>
-                             <div>
-                                <label htmlFor="endDate" className="block mb-2 text-sm font-medium">End Date</label>
-                                <input type="date" id="endDate" name="endDate" value={formData.endDate} onChange={handleChange} required className="input-field" />
-                            </div>
-                        </div>
-                        <div>
-                            <label htmlFor="category" className="block mb-2 text-sm font-medium">Category</label>
-                            <select id="category" name="category" value={formData.category} onChange={handleChange} className="input-field">
-                                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label htmlFor="hours" className="block mb-2 text-sm font-medium">Hours per Entry</label>
-                            <input type="number" id="hours" name="hours" value={formData.hours} onChange={handleChange} step="0.1" min="0" required placeholder="e.g., 4" className="input-field" />
-                        </div>
-                        <div>
-                            <label htmlFor="location" className="block mb-2 text-sm font-medium">Location / Organization</label>
-                            <input type="text" id="location" name="location" value={formData.location} onChange={handleChange} required placeholder="e.g., Community Clinic" className="input-field" />
-                        </div>
-                        <div>
-                            <label htmlFor="notes" className="block mb-2 text-sm font-medium">Notes (optional)</label>
-                            <textarea id="notes" name="notes" value={formData.notes} onChange={handleChange} rows="3" placeholder="Same notes for all entries..." className="input-field"></textarea>
-                        </div>
-                    </div>
-
-                    <div className="mt-6 flex justify-end gap-4">
-                        <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
-                        <button type="submit" disabled={isSubmitting} className="btn-primary">
-                            {isSubmitting ? 'Adding...' : 'Add Entries'}
                         </button>
                     </div>
                 </form>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'firebase/auth';
-import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc, onSnapshot, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc, onSnapshot, orderBy, writeBatch } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // --- Firebase Configuration ---
@@ -252,11 +252,13 @@ const Dashboard = ({ isGuest }) => {
     const [experiences, setExperiences] = useState([]);
     const [goals, setGoals] = useState({});
     const [loading, setLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isExperienceModalOpen, setIsExperienceModalOpen] = useState(false);
     const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+    const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
     const [editingExperience, setEditingExperience] = useState(null);
     const [filterCategory, setFilterCategory] = useState('All');
     const [searchTerm, setSearchTerm] = useState('');
+    const [dateRange, setDateRange] = useState({ start: '', end: '' });
     
     useEffect(() => {
         if (isGuest) {
@@ -301,13 +303,13 @@ const Dashboard = ({ isGuest }) => {
     }, [user, isGuest]);
 
     const handleAddOrUpdate = () => {
-        setIsModalOpen(false);
+        setIsExperienceModalOpen(false);
         setEditingExperience(null);
     };
     
     const handleEdit = (exp) => {
         setEditingExperience(exp);
-        setIsModalOpen(true);
+        setIsExperienceModalOpen(true);
     };
 
     const handleDelete = async (id) => {
@@ -334,7 +336,10 @@ const Dashboard = ({ isGuest }) => {
         const searchTermMatch = searchTerm === '' || 
                                 (exp.location && exp.location.toLowerCase().includes(searchTerm.toLowerCase())) || 
                                 (exp.notes && exp.notes.toLowerCase().includes(searchTerm.toLowerCase()));
-        return categoryMatch && searchTermMatch;
+        const startDateMatch = dateRange.start === '' || exp.date.toDate() >= new Date(dateRange.start);
+        const endDateMatch = dateRange.end === '' || exp.date.toDate() <= new Date(dateRange.end);
+
+        return categoryMatch && searchTermMatch && startDateMatch && endDateMatch;
     });
 
     const displayName = isGuest ? "Guest" : user?.displayName;
@@ -348,12 +353,13 @@ const Dashboard = ({ isGuest }) => {
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                     <button onClick={() => setIsGoalModalOpen(true)} className="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" /></svg>
                         Set Goals
                     </button>
-                    <button onClick={() => { setEditingExperience(null); setIsModalOpen(true); }} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
-                        Log New Experience
+                    <button onClick={() => setIsBulkAddModalOpen(true)} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
+                        Bulk Add
+                    </button>
+                    <button onClick={() => { setEditingExperience(null); setIsExperienceModalOpen(true); }} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
+                        Log New
                     </button>
                 </div>
             </div>
@@ -368,12 +374,14 @@ const Dashboard = ({ isGuest }) => {
                 setFilterCategory={setFilterCategory}
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
+                dateRange={dateRange}
+                setDateRange={setDateRange}
             />
 
-            {isModalOpen && (
+            {isExperienceModalOpen && (
                 <ExperienceModal 
-                    isOpen={isModalOpen}
-                    onClose={() => { setIsModalOpen(false); setEditingExperience(null); }}
+                    isOpen={isExperienceModalOpen}
+                    onClose={() => { setIsExperienceModalOpen(false); setEditingExperience(null); }}
                     onSuccess={handleAddOrUpdate}
                     experience={editingExperience}
                     isGuest={isGuest}
@@ -385,6 +393,14 @@ const Dashboard = ({ isGuest }) => {
                     onClose={() => setIsGoalModalOpen(false)}
                     onSuccess={handleGoalsSaved}
                     currentGoals={goals}
+                    isGuest={isGuest}
+                />
+            )}
+            {isBulkAddModalOpen && (
+                <BulkAddModal
+                    isOpen={isBulkAddModalOpen}
+                    onClose={() => setIsBulkAddModalOpen(false)}
+                    onSuccess={() => setIsBulkAddModalOpen(false)} // onSnapshot will update the UI
                     isGuest={isGuest}
                 />
             )}
@@ -465,7 +481,7 @@ const AnalyticsSummary = ({ experiences, goals }) => {
                             <Tooltip formatter={(value) => `${value.toFixed(1)} hrs`} />
                             <Legend />
                             {categories.map(cat => (
-                                <Bar key={cat.name} dataKey={cat.name} fill={cat.color} />
+                                <Bar key={cat.name} dataKey={cat.name} stackId="a" fill={cat.color} />
                             ))}
                         </BarChart>
                     </ResponsiveContainer>
@@ -475,7 +491,7 @@ const AnalyticsSummary = ({ experiences, goals }) => {
     );
 };
 
-const ExperienceLog = ({ allExperiences, loading, onEdit, onDelete, filterCategory, setFilterCategory, searchTerm, setSearchTerm }) => {
+const ExperienceLog = ({ allExperiences, loading, onEdit, onDelete, filterCategory, setFilterCategory, searchTerm, setSearchTerm, dateRange, setDateRange }) => {
     const categories = ['All', 'Patient Care Experience', 'Healthcare Experience', 'Research', 'Shadowing', 'Volunteer Work', 'Other'];
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -495,16 +511,16 @@ const ExperienceLog = ({ allExperiences, loading, onEdit, onDelete, filterCatego
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [filterCategory, searchTerm]);
+    }, [filterCategory, searchTerm, dateRange]);
 
     return (
         <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-md">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">Experience Log</h3>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full lg:w-auto">
                     <input 
                         type="text"
-                        placeholder="Search location or notes..."
+                        placeholder="Search..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
@@ -517,6 +533,8 @@ const ExperienceLog = ({ allExperiences, loading, onEdit, onDelete, filterCatego
                     >
                         {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
+                     <input type="date" name="start" value={dateRange.start} onChange={(e) => setDateRange(prev => ({...prev, start: e.target.value}))} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                    <input type="date" name="end" value={dateRange.end} onChange={(e) => setDateRange(prev => ({...prev, end: e.target.value}))} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                 </div>
             </div>
             <div className="overflow-x-auto">
@@ -745,7 +763,6 @@ const GoalModal = ({ isOpen, onClose, onSuccess, currentGoals, isGuest }) => {
         }, {});
 
         if (isGuest) {
-            // In a real app, you might update a local state for the guest user
             console.log("Guest goals would be saved locally:", goalsToSave);
             onSuccess();
             setIsSubmitting(false);
@@ -878,6 +895,122 @@ const SettingsPage = ({ setCurrentPage }) => {
                     <div className="flex justify-end">
                         <button type="submit" disabled={isSaving} className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
                             {isSaving ? 'Saving...' : 'Save Profile'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const BulkAddModal = ({ isOpen, onClose, onSuccess, isGuest }) => {
+    const { user } = useAuth();
+    const [formData, setFormData] = useState({
+        category: 'Patient Care Experience',
+        hours: '',
+        location: '',
+        notes: '',
+        startDate: '',
+        endDate: '',
+    });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState('');
+    const categories = ['Patient Care Experience', 'Healthcare Experience', 'Research', 'Shadowing', 'Volunteer Work', 'Other'];
+
+    if (!isOpen) return null;
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        const { category, hours, location, startDate, endDate } = formData;
+        if (!hours || hours <= 0 || !startDate || !endDate) {
+            setError('Please fill out all required fields.');
+            return;
+        }
+        setError('');
+        setIsSubmitting(true);
+
+        const batch = writeBatch(db);
+        let currentDate = new Date(startDate);
+        const lastDate = new Date(endDate);
+
+        while (currentDate <= lastDate) {
+            const newDocRef = doc(collection(db, "experiences"));
+            batch.set(newDocRef, {
+                category,
+                hours: parseFloat(hours),
+                location,
+                notes: formData.notes,
+                date: new Date(currentDate),
+                userId: user.uid,
+                createdAt: serverTimestamp(),
+            });
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        try {
+            await batch.commit();
+            onSuccess();
+        } catch (err) {
+            console.error("Error saving bulk experiences:", err);
+            setError("Failed to save experiences. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">
+                <form onSubmit={handleSubmit} className="p-6">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Bulk Add Experiences</h2>
+                        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                    
+                    {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="startDate" className="block mb-2 text-sm font-medium">Start Date</label>
+                                <input type="date" id="startDate" name="startDate" value={formData.startDate} onChange={handleChange} required className="input-field" />
+                            </div>
+                             <div>
+                                <label htmlFor="endDate" className="block mb-2 text-sm font-medium">End Date</label>
+                                <input type="date" id="endDate" name="endDate" value={formData.endDate} onChange={handleChange} required className="input-field" />
+                            </div>
+                        </div>
+                        <div>
+                            <label htmlFor="category" className="block mb-2 text-sm font-medium">Category</label>
+                            <select id="category" name="category" value={formData.category} onChange={handleChange} className="input-field">
+                                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label htmlFor="hours" className="block mb-2 text-sm font-medium">Hours per Entry</label>
+                            <input type="number" id="hours" name="hours" value={formData.hours} onChange={handleChange} step="0.1" min="0" required placeholder="e.g., 4" className="input-field" />
+                        </div>
+                        <div>
+                            <label htmlFor="location" className="block mb-2 text-sm font-medium">Location / Organization</label>
+                            <input type="text" id="location" name="location" value={formData.location} onChange={handleChange} required placeholder="e.g., Community Clinic" className="input-field" />
+                        </div>
+                        <div>
+                            <label htmlFor="notes" className="block mb-2 text-sm font-medium">Notes (optional)</label>
+                            <textarea id="notes" name="notes" value={formData.notes} onChange={handleChange} rows="3" placeholder="Same notes for all entries..." className="input-field"></textarea>
+                        </div>
+                    </div>
+
+                    <div className="mt-6 flex justify-end gap-4">
+                        <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
+                        <button type="submit" disabled={isSubmitting} className="btn-primary">
+                            {isSubmitting ? 'Adding...' : 'Add Entries'}
                         </button>
                     </div>
                 </form>

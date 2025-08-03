@@ -78,7 +78,17 @@ const useAuth = () => {
 
 // --- Main App Component ---
 export default function App() {
+    return (
+        <AuthProvider>
+            <PreHealthFolioApp />
+        </AuthProvider>
+    );
+}
+
+// --- Wrapper Component for the main application logic ---
+function PreHealthFolioApp() {
     const [darkMode, setDarkMode] = useState(false);
+    const { user, loading } = useAuth();
 
     useEffect(() => {
         const isDark = localStorage.getItem('darkMode') === 'true';
@@ -102,19 +112,16 @@ export default function App() {
         });
     };
     
-    const { user, loading } = useAuth();
-    
     // Apply different background for login screen
     const backgroundClass = !user && !loading ? 'bg-gradient-to-br from-gray-50 to-blue-100 dark:from-gray-900 dark:to-blue-900' : 'bg-gray-50 dark:bg-gray-900';
 
     return (
-        <AuthProvider>
-            <div className={`min-h-screen font-sans ${backgroundClass} text-gray-800 dark:text-gray-200 transition-colors duration-300`}>
-                <AppContent darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
-            </div>
-        </AuthProvider>
+        <div className={`min-h-screen font-sans ${backgroundClass} text-gray-800 dark:text-gray-200 transition-colors duration-300`}>
+            <AppContent darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+        </div>
     );
 }
+
 
 // --- App Content (Handles Routing) ---
 const AppContent = ({ darkMode, toggleDarkMode }) => {

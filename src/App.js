@@ -249,7 +249,8 @@ const Dashboard = ({ isGuest }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
     const [editingExperience, setEditingExperience] = useState(null);
-    const [filter, setFilter] = useState({ category: 'All' });
+    const [filterCategory, setFilterCategory] = useState('All');
+    const [searchTerm, setSearchTerm] = useState('');
     
     useEffect(() => {
         if (isGuest) {
@@ -265,7 +266,6 @@ const Dashboard = ({ isGuest }) => {
 
         setLoading(true);
 
-        // Real-time listener for experiences with explicit ordering
         const expQuery = query(collection(db, "experiences"), where("userId", "==", user.uid), orderBy("date", "desc"));
         const unsubscribeExperiences = onSnapshot(expQuery, (querySnapshot) => {
             const experiencesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -277,7 +277,6 @@ const Dashboard = ({ isGuest }) => {
             setLoading(false);
         });
 
-        // Real-time listener for goals
         const goalDocRef = doc(db, "goals", user.uid);
         const unsubscribeGoals = onSnapshot(goalDocRef, (docSnap) => {
             if (docSnap.exists()) {
@@ -289,7 +288,6 @@ const Dashboard = ({ isGuest }) => {
             console.error("Error fetching goals in real-time:", error);
         });
 
-        // Cleanup function to unsubscribe from listeners when component unmounts
         return () => {
             unsubscribeExperiences();
             unsubscribeGoals();
@@ -324,9 +322,13 @@ const Dashboard = ({ isGuest }) => {
     const handleGoalsSaved = () => {
         setIsGoalModalOpen(false);
     }
-
+    
     const filteredExperiences = experiences.filter(exp => {
-        return filter.category === 'All' || exp.category === filter.category;
+        const categoryMatch = filterCategory === 'All' || exp.category === filterCategory;
+        const searchTermMatch = searchTerm === '' || 
+                                exp.location.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                exp.notes.toLowerCase().includes(searchTerm.toLowerCase());
+        return categoryMatch && searchTermMatch;
     });
 
     const displayName = isGuest ? "Guest" : user?.displayName;
@@ -356,8 +358,10 @@ const Dashboard = ({ isGuest }) => {
                 loading={loading}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
-                filter={filter}
-                setFilter={setFilter}
+                filterCategory={filterCategory}
+                setFilterCategory={setFilterCategory}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
             />
 
             {isModalOpen && (
@@ -464,19 +468,44 @@ const AnalyticsSummary = ({ experiences, goals }) => {
     );
 };
 
-const ExperienceLog = ({ experiences, loading, onEdit, onDelete, filter, setFilter }) => {
+const ExperienceLog = ({ experiences, loading, onEdit, onDelete, filterCategory, setFilterCategory, searchTerm, setSearchTerm }) => {
     const categories = ['All', 'Patient Care Experience', 'Healthcare Experience', 'Research', 'Shadowing', 'Volunteer Work', 'Other'];
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    const totalPages = Math.ceil(experiences.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentExperiences = experiences.slice(startIndex, endIndex);
+
+    const goToNextPage = () => {
+        setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+    };
+
+    const goToPreviousPage = () => {
+        setCurrentPage((prev) => Math.max(prev - 1, 1));
+    };
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filterCategory, searchTerm]);
 
     return (
         <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-md">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">Experience Log</h3>
-                <div className="flex items-center gap-2">
-                    <label htmlFor="category-filter" className="text-sm font-medium">Filter by:</label>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                    <input 
+                        type="text"
+                        placeholder="Search location or notes..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                    />
                     <select
                         id="category-filter"
-                        value={filter.category}
-                        onChange={(e) => setFilter({...filter, category: e.target.value})}
+                        value={filterCategory}
+                        onChange={(e) => setFilterCategory(e.target.value)}
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                     >
                         {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
@@ -498,13 +527,26 @@ const ExperienceLog = ({ experiences, loading, onEdit, onDelete, filter, setFilt
                     <tbody>
                         {loading ? (
                             <tr><td colSpan="6" className="text-center p-8">Loading experiences...</td></tr>
-                        ) : experiences.length === 0 ? (
-                            <tr><td colSpan="6" className="text-center p-8">No experiences logged yet. Click "Log New Experience" to get started!</td></tr>
+                        ) : currentExperiences.length === 0 ? (
+                            <tr><td colSpan="6" className="text-center p-8">No experiences match your search.</td></tr>
                         ) : (
-                            experiences.map(exp => <ExperienceRow key={exp.id} exp={exp} onEdit={onEdit} onDelete={onDelete} />)
+                            currentExperiences.map(exp => <ExperienceRow key={exp.id} exp={exp} onEdit={onEdit} onDelete={onDelete} />)
                         )}
                     </tbody>
                 </table>
+            </div>
+            <div className="flex justify-between items-center pt-4">
+                <span className="text-sm text-gray-700 dark:text-gray-400">
+                    Showing <span className="font-semibold">{startIndex + 1}</span> to <span className="font-semibold">{Math.min(endIndex, experiences.length)}</span> of <span className="font-semibold">{experiences.length}</span> Results
+                </span>
+                <div className="inline-flex mt-2 xs:mt-0">
+                    <button onClick={goToPreviousPage} disabled={currentPage === 1} className="flex items-center justify-center px-3 h-8 text-sm font-medium text-white bg-gray-800 rounded-l hover:bg-gray-900 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed">
+                        Prev
+                    </button>
+                    <button onClick={goToNextPage} disabled={currentPage === totalPages || totalPages === 0} className="flex items-center justify-center px-3 h-8 text-sm font-medium text-white bg-gray-800 border-0 border-l border-gray-700 rounded-r hover:bg-gray-900 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed">
+                        Next
+                    </button>
+                </div>
             </div>
         </div>
     );

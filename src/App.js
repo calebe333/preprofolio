@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'firebase/auth';
-import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -37,6 +37,14 @@ const getMockData = () => ([
     { id: 'mock5', category: 'Healthcare Experience', date: { toDate: () => new Date('2024-04-10') }, hours: 35, location: 'Pharmacy Technician', notes: 'Filled prescriptions and managed inventory.' },
 ]);
 
+const mockGoals = {
+    'Patient Care Experience': 200,
+    'Healthcare Experience': 100,
+    'Research': 150,
+    'Shadowing': 50,
+    'Volunteer Work': 100,
+    'Other': 0
+};
 
 // --- Authentication Context ---
 const AuthContext = createContext();
@@ -52,7 +60,6 @@ const AuthProvider = ({ children }) => {
         }
 
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            console.log("Auth state changed. Current user:", currentUser);
             setUser(currentUser);
             setLoading(false);
         });
@@ -174,9 +181,7 @@ const LoginScreen = ({ onGuestLogin }) => {
             return;
         }
         try {
-            console.log("Attempting sign in with popup...");
             await signInWithPopup(auth, provider);
-            // onAuthStateChanged will handle the user state update automatically
         } catch (error) {
             console.error("Authentication error:", error);
             if (error.code === 'auth/popup-blocked') {
@@ -222,46 +227,51 @@ const LoadingScreen = () => (
 const Dashboard = ({ isGuest }) => {
     const { user } = useAuth();
     const [experiences, setExperiences] = useState([]);
+    const [goals, setGoals] = useState({});
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
     const [editingExperience, setEditingExperience] = useState(null);
     const [filter, setFilter] = useState({ category: 'All' });
     
-    const fetchExperiences = useCallback(async () => {
+    const fetchExperiencesAndGoals = useCallback(async () => {
         if (isGuest) {
             setExperiences(getMockData());
+            setGoals(mockGoals);
             setLoading(false);
             return;
         }
         if (!user || !db) return;
         setLoading(true);
         try {
-            const q = query(collection(db, "experiences"), where("userId", "==", user.uid));
-            const querySnapshot = await getDocs(q);
-            const experiencesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Fetch experiences
+            const expQuery = query(collection(db, "experiences"), where("userId", "==", user.uid));
+            const expSnapshot = await getDocs(expQuery);
+            const experiencesData = expSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             experiencesData.sort((a, b) => b.date.toDate() - a.date.toDate());
             setExperiences(experiencesData);
+
+            // Fetch goals
+            const goalDocRef = doc(db, "goals", user.uid);
+            const goalDocSnap = await getDoc(goalDocRef);
+            if (goalDocSnap.exists()) {
+                setGoals(goalDocSnap.data());
+            } else {
+                setGoals({}); // No goals set yet
+            }
+
         } catch (error) {
-            console.error("Error fetching experiences:", error);
+            console.error("Error fetching data:", error);
         }
         setLoading(false);
     }, [user, isGuest]);
 
     useEffect(() => {
-        fetchExperiences();
-    }, [fetchExperiences]);
+        fetchExperiencesAndGoals();
+    }, [fetchExperiencesAndGoals]);
 
-    const handleAddOrUpdate = (expData) => {
-        if (isGuest) {
-            if (editingExperience) {
-                setExperiences(experiences.map(exp => exp.id === editingExperience.id ? { ...exp, ...expData } : exp));
-            } else {
-                const newExp = { id: `mock${Date.now()}`, ...expData, date: { toDate: () => new Date(expData.date) } };
-                setExperiences([newExp, ...experiences]);
-            }
-        } else {
-            fetchExperiences();
-        }
+    const handleAddOrUpdate = () => {
+        fetchExperiencesAndGoals();
         setIsModalOpen(false);
         setEditingExperience(null);
     };
@@ -280,12 +290,17 @@ const Dashboard = ({ isGuest }) => {
         if (window.confirm("Are you sure you want to delete this entry? This action cannot be undone.")) {
             try {
                 await deleteDoc(doc(db, "experiences", id));
-                fetchExperiences();
+                fetchExperiencesAndGoals();
             } catch (error) {
                 console.error("Error deleting experience:", error);
             }
         }
     };
+
+    const handleGoalsSaved = () => {
+        fetchExperiencesAndGoals();
+        setIsGoalModalOpen(false);
+    }
 
     const filteredExperiences = experiences.filter(exp => {
         return filter.category === 'All' || exp.category === filter.category;
@@ -300,20 +315,19 @@ const Dashboard = ({ isGuest }) => {
                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Your Dashboard</h2>
                     <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome back, {displayName}!</p>
                 </div>
-                <button onClick={() => { setEditingExperience(null); setIsModalOpen(true); }} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 transition-transform transform hover:scale-105">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
-                    Log New Experience
-                </button>
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <button onClick={() => setIsGoalModalOpen(true)} className="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" /></svg>
+                        Set Goals
+                    </button>
+                    <button onClick={() => { setEditingExperience(null); setIsModalOpen(true); }} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
+                        Log New Experience
+                    </button>
+                </div>
             </div>
             
-            {isGuest && (
-                <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md" role="alert">
-                    <p className="font-bold">Guest Mode</p>
-                    <p>You are currently in guest mode. Any changes you make will not be saved.</p>
-                </div>
-            )}
-
-            <AnalyticsSummary experiences={experiences} />
+            <AnalyticsSummary experiences={experiences} goals={goals} />
             <ExperienceLog 
                 experiences={filteredExperiences} 
                 loading={loading}
@@ -332,11 +346,20 @@ const Dashboard = ({ isGuest }) => {
                     isGuest={isGuest}
                 />
             )}
+            {isGoalModalOpen && (
+                <GoalModal
+                    isOpen={isGoalModalOpen}
+                    onClose={() => setIsGoalModalOpen(false)}
+                    onSuccess={handleGoalsSaved}
+                    currentGoals={goals}
+                    isGuest={isGuest}
+                />
+            )}
         </div>
     );
 };
 
-const AnalyticsSummary = ({ experiences }) => {
+const AnalyticsSummary = ({ experiences, goals }) => {
     const categories = [
         { name: 'Patient Care Experience', color: '#3B82F6' },
         { name: 'Healthcare Experience', color: '#10B981' },
@@ -346,17 +369,16 @@ const AnalyticsSummary = ({ experiences }) => {
         { name: 'Other', color: '#6B7280' },
     ];
 
-    const summary = categories.map(cat => ({
-        name: cat.name,
-        hours: experiences.filter(e => e.category === cat.name).reduce((acc, curr) => acc + (curr.hours || 0), 0)
-    }));
+    const summary = categories.map(cat => {
+        const current = experiences.filter(e => e.category === cat.name).reduce((acc, curr) => acc + (curr.hours || 0), 0);
+        const goal = goals[cat.name] || 0;
+        const progress = goal > 0 ? Math.min((current / goal) * 100, 100) : 0;
+        return { name: cat.name, current, goal, progress, color: cat.color };
+    });
 
-    const totalHours = summary.reduce((acc, curr) => acc + curr.hours, 0);
-
-    const pieData = summary.filter(d => d.hours > 0).map(d => ({
-        name: d.name,
-        value: d.hours
-    }));
+    const totalHours = experiences.reduce((acc, curr) => acc + (curr.hours || 0), 0);
+    const totalGoal = Object.values(goals).reduce((acc, curr) => acc + (parseInt(curr, 10) || 0), 0);
+    const totalProgress = totalGoal > 0 ? Math.min((totalHours / totalGoal) * 100, 100) : 0;
 
     const barData = experiences.reduce((acc, exp) => {
         if (!exp.date || !exp.date.toDate) return acc;
@@ -376,51 +398,44 @@ const AnalyticsSummary = ({ experiences }) => {
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md space-y-4">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Hours Summary</h3>
-                <div className="flex justify-between items-baseline border-b-2 border-blue-500 pb-2">
-                    <span className="font-bold text-lg">Total Hours</span>
-                    <span className="text-2xl font-extrabold text-blue-600 dark:text-blue-400">{totalHours.toFixed(1)}</span>
+                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">Overall Progress</h3>
+                 <div className="space-y-1">
+                    <div className="flex justify-between items-baseline mb-1">
+                        <span className="font-bold text-lg text-gray-800 dark:text-gray-200">Total Hours</span>
+                        <span className="text-2xl font-extrabold text-blue-600 dark:text-blue-400">{totalHours.toFixed(1)} / {totalGoal}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
+                        <div className="bg-blue-600 h-4 rounded-full" style={{ width: `${totalProgress}%` }}></div>
+                    </div>
                 </div>
-                {summary.map((cat, index) => (
-                    cat.hours > 0 && (
-                        <div key={index} className="flex justify-between items-center text-sm">
-                            <span className="text-gray-600 dark:text-gray-300">{cat.name}</span>
-                            <span className="font-semibold">{cat.hours.toFixed(1)} hrs</span>
+                <div className="pt-4 space-y-3">
+                    {summary.filter(s => s.goal > 0).map((item) => (
+                        <div key={item.name}>
+                            <div className="flex justify-between text-sm font-medium mb-1">
+                                <span className="text-gray-700 dark:text-gray-300">{item.name}</span>
+                                <span className="text-gray-500 dark:text-gray-400">{item.current.toFixed(1)} / {item.goal} hrs</span>
+                            </div>
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                                <div className="h-2.5 rounded-full" style={{ width: `${item.progress}%`, backgroundColor: item.color }}></div>
+                            </div>
                         </div>
-                    )
-                ))}
+                    ))}
+                </div>
             </div>
 
-            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Category Breakdown</h3>
-                    {pieData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={250}>
-                            <PieChart>
-                                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                                    {pieData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={categories.find(c => c.name === entry.name)?.color || '#6B7280'} />
-                                    ))}
-                                </Pie>
-                                <Tooltip formatter={(value) => `${value.toFixed(1)} hrs`} />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    ) : <p className="text-center text-gray-500 dark:text-gray-400 pt-16">Log hours to see a breakdown.</p>}
-                </div>
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Monthly Progress</h3>
-                    {sortedBarData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={250}>
-                            <BarChart data={sortedBarData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                <Tooltip formatter={(value) => `${value.toFixed(1)} hrs`} />
-                                <Bar dataKey="hours" fill="#3B82F6" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    ) : <p className="text-center text-gray-500 dark:text-gray-400 pt-16">Log hours to see your progress.</p>}
-                </div>
+            <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Monthly Progress</h3>
+                {sortedBarData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={350}>
+                        <BarChart data={sortedBarData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
+                            <XAxis dataKey="name" />
+                            <YAxis />
+                            <Tooltip formatter={(value) => `${value.toFixed(1)} hrs`} />
+                            <Bar dataKey="hours" fill="#3B82F6" />
+                        </BarChart>
+                    </ResponsiveContainer>
+                ) : <p className="text-center text-gray-500 dark:text-gray-400 pt-16">Log hours to see your progress.</p>}
             </div>
         </div>
     );
@@ -619,6 +634,101 @@ const ExperienceModal = ({ isOpen, onClose, onSuccess, experience, isGuest }) =>
                         </button>
                         <button type="submit" disabled={isSubmitting} className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:bg-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800 dark:disabled:bg-blue-400">
                             {isSubmitting ? 'Saving...' : 'Save Experience'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const GoalModal = ({ isOpen, onClose, onSuccess, currentGoals, isGuest }) => {
+    const { user } = useAuth();
+    const categories = ['Patient Care Experience', 'Healthcare Experience', 'Research', 'Shadowing', 'Volunteer Work', 'Other'];
+    const [goals, setGoals] = useState({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        const initialGoals = categories.reduce((acc, cat) => {
+            acc[cat] = currentGoals[cat] || '';
+            return acc;
+        }, {});
+        setGoals(initialGoals);
+    }, [currentGoals]);
+
+    if (!isOpen) return null;
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setGoals(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        
+        const goalsToSave = Object.entries(goals).reduce((acc, [key, value]) => {
+            acc[key] = parseInt(value, 10) || 0;
+            return acc;
+        }, {});
+
+        if (isGuest) {
+            // In a real app, you might update a local state for the guest user
+            console.log("Guest goals would be saved locally:", goalsToSave);
+            onSuccess();
+            setIsSubmitting(false);
+            return;
+        }
+
+        try {
+            const goalDocRef = doc(db, "goals", user.uid);
+            await setDoc(goalDocRef, goalsToSave, { merge: true });
+            onSuccess();
+        } catch (error) {
+            console.error("Error saving goals:", error);
+            alert("Failed to save goals. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">
+                <form onSubmit={handleSubmit} className="p-6">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Set Your Hour Goals</h2>
+                        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                    
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Set a target number of hours for each category to track your progress.</p>
+
+                    <div className="space-y-4">
+                        {categories.map(cat => (
+                             <div key={cat}>
+                                <label htmlFor={cat} className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">{cat}</label>
+                                <input 
+                                    type="number" 
+                                    id={cat} 
+                                    name={cat}
+                                    value={goals[cat]}
+                                    onChange={handleChange}
+                                    min="0"
+                                    placeholder="e.g., 200" 
+                                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                                />
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="mt-6 flex justify-end gap-4">
+                        <button type="button" onClick={onClose} className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">
+                            Cancel
+                        </button>
+                        <button type="submit" disabled={isSubmitting} className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:bg-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800 dark:disabled:bg-blue-400">
+                            {isSubmitting ? 'Saving...' : 'Save Goals'}
                         </button>
                     </div>
                 </form>

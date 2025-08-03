@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'firebase/auth';
-import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // --- Firebase Configuration ---
@@ -80,13 +80,13 @@ const useAuth = () => {
 export default function App() {
     return (
         <AuthProvider>
-            <PreHealthFolioApp />
+            <PreProFolioApp />
         </AuthProvider>
     );
 }
 
 // --- Wrapper Component for the main application logic ---
-function PreHealthFolioApp() {
+function PreProFolioApp() {
     const [darkMode, setDarkMode] = useState(false);
     const { user, loading } = useAuth();
 
@@ -165,7 +165,7 @@ const Header = ({ darkMode, setDarkMode, onSignOut, showSignOut }) => {
                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                         </svg>
-                        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">PreHealthFolio</h1>
+                        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">PreProFolio</h1>
                     </div>
                     <div className="flex items-center space-x-4">
                         <button onClick={setDarkMode} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
@@ -211,7 +211,7 @@ const LoginScreen = ({ onGuestLogin }) => {
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                     </svg>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">PreHealthFolio</h1>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">PreProFolio</h1>
                 </div>
                 <p className="text-gray-600 dark:text-gray-300">Your digital logbook for the journey to professional school. Track hours, set goals, and stay organized.</p>
                 <div className="space-y-4 pt-4">
@@ -251,44 +251,53 @@ const Dashboard = ({ isGuest }) => {
     const [editingExperience, setEditingExperience] = useState(null);
     const [filter, setFilter] = useState({ category: 'All' });
     
-    const fetchExperiencesAndGoals = useCallback(async () => {
+    useEffect(() => {
         if (isGuest) {
             setExperiences(getMockData());
             setGoals(mockGoals);
             setLoading(false);
             return;
         }
-        if (!user || !db) return;
+        if (!user || !db) {
+            setLoading(false);
+            return;
+        };
+
         setLoading(true);
-        try {
-            // Fetch experiences
-            const expQuery = query(collection(db, "experiences"), where("userId", "==", user.uid));
-            const expSnapshot = await getDocs(expQuery);
-            const experiencesData = expSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Real-time listener for experiences
+        const expQuery = query(collection(db, "experiences"), where("userId", "==", user.uid));
+        const unsubscribeExperiences = onSnapshot(expQuery, (querySnapshot) => {
+            const experiencesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             experiencesData.sort((a, b) => b.date.toDate() - a.date.toDate());
             setExperiences(experiencesData);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching experiences in real-time:", error);
+            setLoading(false);
+        });
 
-            // Fetch goals
-            const goalDocRef = doc(db, "goals", user.uid);
-            const goalDocSnap = await getDoc(goalDocRef);
-            if (goalDocSnap.exists()) {
-                setGoals(goalDocSnap.data());
+        // Real-time listener for goals
+        const goalDocRef = doc(db, "goals", user.uid);
+        const unsubscribeGoals = onSnapshot(goalDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setGoals(docSnap.data());
             } else {
-                setGoals({}); // No goals set yet
+                setGoals({});
             }
+        }, (error) => {
+            console.error("Error fetching goals in real-time:", error);
+        });
 
-        } catch (error) {
-            console.error("Error fetching data:", error);
-        }
-        setLoading(false);
+        // Cleanup function to unsubscribe from listeners when component unmounts
+        return () => {
+            unsubscribeExperiences();
+            unsubscribeGoals();
+        };
     }, [user, isGuest]);
 
-    useEffect(() => {
-        fetchExperiencesAndGoals();
-    }, [fetchExperiencesAndGoals]);
-
     const handleAddOrUpdate = () => {
-        fetchExperiencesAndGoals();
+        // No need to re-fetch, onSnapshot handles it. Just close the modal.
         setIsModalOpen(false);
         setEditingExperience(null);
     };
@@ -307,7 +316,7 @@ const Dashboard = ({ isGuest }) => {
         if (window.confirm("Are you sure you want to delete this entry? This action cannot be undone.")) {
             try {
                 await deleteDoc(doc(db, "experiences", id));
-                fetchExperiencesAndGoals();
+                // No need to re-fetch, onSnapshot handles it.
             } catch (error) {
                 console.error("Error deleting experience:", error);
             }
@@ -315,7 +324,7 @@ const Dashboard = ({ isGuest }) => {
     };
 
     const handleGoalsSaved = () => {
-        fetchExperiencesAndGoals();
+        // No need to re-fetch, onSnapshot handles it. Just close the modal.
         setIsGoalModalOpen(false);
     }
 

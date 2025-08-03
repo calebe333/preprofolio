@@ -89,6 +89,7 @@ export default function App() {
 function PreProFolioApp() {
     const [darkMode, setDarkMode] = useState(false);
     const { user, loading } = useAuth();
+    const [currentPage, setCurrentPage] = useState('dashboard');
 
     useEffect(() => {
         const isDark = localStorage.getItem('darkMode') === 'true';
@@ -117,14 +118,14 @@ function PreProFolioApp() {
 
     return (
         <div className={`min-h-screen font-sans ${backgroundClass} text-gray-800 dark:text-gray-200 transition-colors duration-300`}>
-            <AppContent darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+            <AppContent darkMode={darkMode} toggleDarkMode={toggleDarkMode} currentPage={currentPage} setCurrentPage={setCurrentPage} />
         </div>
     );
 }
 
 
 // --- App Content (Handles Routing) ---
-const AppContent = ({ darkMode, toggleDarkMode }) => {
+const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) => {
     const { user, loading } = useAuth();
     const [isGuest, setIsGuest] = useState(false);
 
@@ -146,9 +147,11 @@ const AppContent = ({ darkMode, toggleDarkMode }) => {
 
     return (
         <>
-            {user || isGuest ? <Header darkMode={darkMode} setDarkMode={toggleDarkMode} onSignOut={handleSignOut} showSignOut={!!user || isGuest} /> : null}
+            {user || isGuest ? <Header darkMode={darkMode} setDarkMode={toggleDarkMode} onSignOut={handleSignOut} showSignOut={!!user || isGuest} setCurrentPage={setCurrentPage} /> : null}
             <main className="p-4 sm:p-6 lg:p-8">
-                {user || isGuest ? <Dashboard isGuest={isGuest} /> : <LoginScreen onGuestLogin={() => setIsGuest(true)} />}
+                {user || isGuest ? (
+                    currentPage === 'dashboard' ? <Dashboard isGuest={isGuest} /> : <SettingsPage setCurrentPage={setCurrentPage} />
+                ) : <LoginScreen onGuestLogin={() => setIsGuest(true)} />}
             </main>
         </>
     );
@@ -156,18 +159,21 @@ const AppContent = ({ darkMode, toggleDarkMode }) => {
 
 // --- UI Components ---
 
-const Header = ({ darkMode, setDarkMode, onSignOut, showSignOut }) => {
+const Header = ({ darkMode, setDarkMode, onSignOut, showSignOut, setCurrentPage }) => {
     return (
         <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-md sticky top-0 z-40">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
-                    <div className="flex items-center space-x-2">
+                    <button onClick={() => setCurrentPage('dashboard')} className="flex items-center space-x-2">
                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                         </svg>
                         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">PreProFolio</h1>
-                    </div>
-                    <div className="flex items-center space-x-4">
+                    </button>
+                    <div className="flex items-center space-x-2">
+                        <button onClick={() => setCurrentPage('settings')} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        </button>
                         <button onClick={setDarkMode} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
                             {darkMode ? 
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg> : 
@@ -326,8 +332,8 @@ const Dashboard = ({ isGuest }) => {
     const filteredExperiences = experiences.filter(exp => {
         const categoryMatch = filterCategory === 'All' || exp.category === filterCategory;
         const searchTermMatch = searchTerm === '' || 
-                                exp.location.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                exp.notes.toLowerCase().includes(searchTerm.toLowerCase());
+                                (exp.location && exp.location.toLowerCase().includes(searchTerm.toLowerCase())) || 
+                                (exp.notes && exp.notes.toLowerCase().includes(searchTerm.toLowerCase()));
         return categoryMatch && searchTermMatch;
     });
 
@@ -354,7 +360,7 @@ const Dashboard = ({ isGuest }) => {
             
             <AnalyticsSummary experiences={experiences} goals={goals} />
             <ExperienceLog 
-                experiences={filteredExperiences} 
+                allExperiences={filteredExperiences} 
                 loading={loading}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
@@ -407,20 +413,18 @@ const AnalyticsSummary = ({ experiences, goals }) => {
     const totalGoal = Object.values(goals).reduce((acc, curr) => acc + (parseInt(curr, 10) || 0), 0);
     const totalProgress = totalGoal > 0 ? Math.min((totalHours / totalGoal) * 100, 100) : 0;
 
-    const barData = experiences.reduce((acc, exp) => {
+    const monthlyData = experiences.reduce((acc, exp) => {
         if (!exp.date || !exp.date.toDate) return acc;
         const month = exp.date.toDate().toLocaleString('default', { month: 'short', year: '2-digit' });
         if (!acc[month]) {
-            acc[month] = 0;
+            acc[month] = { name: month };
+            categories.forEach(cat => acc[month][cat.name] = 0);
         }
-        acc[month] += exp.hours;
+        acc[month][exp.category] = (acc[month][exp.category] || 0) + exp.hours;
         return acc;
     }, {});
 
-    const sortedBarData = Object.entries(barData)
-        .map(([name, hours]) => ({ name, hours }))
-        .sort((a, b) => new Date(a.name) - new Date(b.name));
-
+    const sortedBarData = Object.values(monthlyData).sort((a, b) => new Date(a.name) - new Date(b.name));
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -459,7 +463,10 @@ const AnalyticsSummary = ({ experiences, goals }) => {
                             <XAxis dataKey="name" />
                             <YAxis />
                             <Tooltip formatter={(value) => `${value.toFixed(1)} hrs`} />
-                            <Bar dataKey="hours" fill="#3B82F6" />
+                            <Legend />
+                            {categories.map(cat => (
+                                <Bar key={cat.name} dataKey={cat.name} fill={cat.color} />
+                            ))}
                         </BarChart>
                     </ResponsiveContainer>
                 ) : <p className="text-center text-gray-500 dark:text-gray-400 pt-16">Log hours to see your progress.</p>}
@@ -468,15 +475,15 @@ const AnalyticsSummary = ({ experiences, goals }) => {
     );
 };
 
-const ExperienceLog = ({ experiences, loading, onEdit, onDelete, filterCategory, setFilterCategory, searchTerm, setSearchTerm }) => {
+const ExperienceLog = ({ allExperiences, loading, onEdit, onDelete, filterCategory, setFilterCategory, searchTerm, setSearchTerm }) => {
     const categories = ['All', 'Patient Care Experience', 'Healthcare Experience', 'Research', 'Shadowing', 'Volunteer Work', 'Other'];
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
-    const totalPages = Math.ceil(experiences.length / itemsPerPage);
+    const totalPages = Math.ceil(allExperiences.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const currentExperiences = experiences.slice(startIndex, endIndex);
+    const currentExperiences = allExperiences.slice(startIndex, endIndex);
 
     const goToNextPage = () => {
         setCurrentPage((prev) => Math.min(prev + 1, totalPages));
@@ -537,7 +544,7 @@ const ExperienceLog = ({ experiences, loading, onEdit, onDelete, filterCategory,
             </div>
             <div className="flex justify-between items-center pt-4">
                 <span className="text-sm text-gray-700 dark:text-gray-400">
-                    Showing <span className="font-semibold">{startIndex + 1}</span> to <span className="font-semibold">{Math.min(endIndex, experiences.length)}</span> of <span className="font-semibold">{experiences.length}</span> Results
+                    Showing <span className="font-semibold">{startIndex + 1}</span> to <span className="font-semibold">{Math.min(endIndex, allExperiences.length)}</span> of <span className="font-semibold">{allExperiences.length}</span> Results
                 </span>
                 <div className="inline-flex mt-2 xs:mt-0">
                     <button onClick={goToPreviousPage} disabled={currentPage === 1} className="flex items-center justify-center px-3 h-8 text-sm font-medium text-white bg-gray-800 rounded-l hover:bg-gray-900 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed">
@@ -794,6 +801,83 @@ const GoalModal = ({ isOpen, onClose, onSuccess, currentGoals, isGuest }) => {
                         </button>
                         <button type="submit" disabled={isSubmitting} className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:bg-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800 dark:disabled:bg-blue-400">
                             {isSubmitting ? 'Saving...' : 'Save Goals'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const SettingsPage = ({ setCurrentPage }) => {
+    const { user } = useAuth();
+    const [profile, setProfile] = useState({ track: 'Pre-Med', customTrack: '', bio: '' });
+    const [loading, setLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (!user) return;
+        const profileDocRef = doc(db, 'profiles', user.uid);
+        const unsubscribe = onSnapshot(profileDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setProfile(docSnap.data());
+            }
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, [user]);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setProfile(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        if (!user) return;
+        setIsSaving(true);
+        try {
+            const profileDocRef = doc(db, 'profiles', user.uid);
+            await setDoc(profileDocRef, profile, { merge: true });
+            alert("Profile saved successfully!");
+            setCurrentPage('dashboard');
+        } catch (error) {
+            console.error("Error saving profile:", error);
+            alert("Failed to save profile.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    if (loading) return <LoadingScreen />;
+
+    return (
+        <div className="max-w-4xl mx-auto">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md">
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Profile & Settings</h2>
+                <form onSubmit={handleSave} className="space-y-6">
+                    <div>
+                        <label htmlFor="track" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Professional Track</label>
+                        <select id="track" name="track" value={profile.track} onChange={handleChange} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600">
+                            <option>Pre-Med</option>
+                            <option>Pre-PA</option>
+                            <option>Pre-Dental</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    {profile.track === 'Other' && (
+                        <div>
+                            <label htmlFor="customTrack" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Custom Track Name</label>
+                            <input type="text" name="customTrack" id="customTrack" value={profile.customTrack} onChange={handleChange} className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600" />
+                        </div>
+                    )}
+                     <div>
+                        <label htmlFor="bio" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Professional Summary / Bio</label>
+                        <textarea id="bio" name="bio" rows="4" value={profile.bio} onChange={handleChange} placeholder="Briefly describe your goals and interests..." className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600"></textarea>
+                    </div>
+                    <div className="flex justify-end">
+                        <button type="submit" disabled={isSaving} className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
+                            {isSaving ? 'Saving...' : 'Save Profile'}
                         </button>
                     </div>
                 </form>

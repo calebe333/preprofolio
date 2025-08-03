@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'firebase/auth';
-import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc, onSnapshot, orderBy } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // --- Firebase Configuration ---
@@ -265,15 +265,15 @@ const Dashboard = ({ isGuest }) => {
 
         setLoading(true);
 
-        // Real-time listener for experiences
-        const expQuery = query(collection(db, "experiences"), where("userId", "==", user.uid));
+        // Real-time listener for experiences with explicit ordering
+        const expQuery = query(collection(db, "experiences"), where("userId", "==", user.uid), orderBy("date", "desc"));
         const unsubscribeExperiences = onSnapshot(expQuery, (querySnapshot) => {
             const experiencesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            experiencesData.sort((a, b) => b.date.toDate() - a.date.toDate());
             setExperiences(experiencesData);
             setLoading(false);
         }, (error) => {
             console.error("Error fetching experiences in real-time:", error);
+            alert("Could not fetch experiences. Check the developer console for errors (F12). It's likely a missing Firestore index.");
             setLoading(false);
         });
 
@@ -297,7 +297,6 @@ const Dashboard = ({ isGuest }) => {
     }, [user, isGuest]);
 
     const handleAddOrUpdate = () => {
-        // No need to re-fetch, onSnapshot handles it. Just close the modal.
         setIsModalOpen(false);
         setEditingExperience(null);
     };
@@ -316,7 +315,6 @@ const Dashboard = ({ isGuest }) => {
         if (window.confirm("Are you sure you want to delete this entry? This action cannot be undone.")) {
             try {
                 await deleteDoc(doc(db, "experiences", id));
-                // No need to re-fetch, onSnapshot handles it.
             } catch (error) {
                 console.error("Error deleting experience:", error);
             }
@@ -324,7 +322,6 @@ const Dashboard = ({ isGuest }) => {
     };
 
     const handleGoalsSaved = () => {
-        // No need to re-fetch, onSnapshot handles it. Just close the modal.
         setIsGoalModalOpen(false);
     }
 

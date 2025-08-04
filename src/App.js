@@ -40,22 +40,24 @@ const CATEGORY_NAMES = CATEGORIES.map(c => c.name);
 
 
 // --- Mock Data for Guest Mode ---
-const getMockData = () => ([
-    { id: 'mock1', category: 'Patient Care Experience', date: { toDate: () => new Date('2024-05-15') }, hours: 40, location: 'Community Hospital ER', notes: 'Assisted with patient vitals and transport.' },
-    { id: 'mock2', category: 'Volunteer Work', date: { toDate: () => new Date('2024-06-20') }, hours: 25, location: 'Local Soup Kitchen', notes: 'Served meals and helped with cleanup.' },
-    { id: 'mock3', category: 'Shadowing', date: { toDate: () => new Date('2024-07-05') }, hours: 16, location: 'Dr. Smith\'s Clinic', notes: 'Observed patient consultations and procedures.' },
-    { id: 'mock4', category: 'Research', date: { toDate: () => new Date('2024-07-22') }, hours: 60, location: 'University Biology Lab', notes: 'Conducted experiments on cell cultures.' },
-    { id: 'mock5', category: 'Healthcare Experience', date: { toDate: () => new Date('2024-04-10') }, hours: 35, location: 'Pharmacy Technician', notes: 'Filled prescriptions and managed inventory.' },
-]);
-
-const mockGoals = {
-    'Patient Care Experience': 200,
-    'Healthcare Experience': 100,
-    'Research': 150,
-    'Shadowing': 50,
-    'Volunteer Work': 100,
-    'Other': 0
-};
+const getMockData = () => ({
+    experiences: [
+        { id: 'mock1', category: 'Patient Care Experience', date: { toDate: () => new Date('2024-05-15') }, hours: 40, location: 'Community Hospital ER', notes: 'Assisted with patient vitals and transport.' },
+        { id: 'mock2', category: 'Volunteer Work', date: { toDate: () => new Date('2024-06-20') }, hours: 25, location: 'Local Soup Kitchen', notes: 'Served meals and helped with cleanup.' },
+    ],
+    goals: {
+        'Patient Care Experience': 200,
+        'Healthcare Experience': 100,
+        'Research': 150,
+        'Shadowing': 50,
+        'Volunteer Work': 100,
+        'Other': 0
+    },
+    courses: [
+        { id: 'c1', name: 'General Chemistry I', code: 'CHEM 101', credits: 4, semester: 'Fall', year: 2023, grade: 'A' },
+        { id: 'c2', name: 'Biology I', code: 'BIO 101', credits: 4, semester: 'Fall', year: 2023, grade: 'A-' },
+    ]
+});
 
 // --- Authentication Context ---
 const AuthContext = createContext();
@@ -358,8 +360,8 @@ const Dashboard = ({ isGuest }) => {
     
     useEffect(() => {
         if (isGuest) {
-            setExperiences(getMockData());
-            setGoals(mockGoals);
+            setExperiences(getMockData().experiences);
+            setGoals(getMockData().goals);
             setLoading(false);
             return;
         }

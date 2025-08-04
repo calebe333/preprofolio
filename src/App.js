@@ -1091,19 +1091,292 @@ const GoalModal = ({ isOpen, onClose, onSuccess, currentGoals, isGuest }) => {
     );
 };
 
+// --- Helper function to calculate GPA ---
+const calculateGPA = (courses) => {
+    const gradePoints = {
+        'A': 4.0, 'A-': 3.7, 'B+': 3.3, 'B': 3.0, 'B-': 2.7,
+        'C+': 2.3, 'C': 2.0, 'C-': 1.7, 'D+': 1.3, 'D': 1.0, 'F': 0.0
+    };
+    let totalPoints = 0;
+    let totalCredits = 0;
+
+    courses.forEach(course => {
+        if (gradePoints[course.grade] !== undefined && course.credits > 0) {
+            totalPoints += gradePoints[course.grade] * course.credits;
+            totalCredits += course.credits;
+        }
+    });
+
+    if (totalCredits === 0) return 'N/A';
+    return (totalPoints / totalCredits).toFixed(2);
+};
+
+
+// --- Courses Page ---
 const CoursesPage = ({ isGuest }) => {
-    // Placeholder for now
+    const { user } = useAuth();
+    const [courses, setCourses] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingCourse, setEditingCourse] = useState(null);
+
+    useEffect(() => {
+        if (isGuest) {
+            setCourses(getMockData().courses);
+            setLoading(false);
+            return;
+        }
+        if (!user || !db) {
+            setLoading(false);
+            return;
+        }
+
+        const q = query(collection(db, "courses"), where("userId", "==", user.uid), orderBy("year", "desc"), orderBy("semester", "desc"));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const coursesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setCourses(coursesData);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching courses:", error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [user, isGuest]);
+
+    const handleAddOrUpdate = () => {
+        setIsModalOpen(false);
+        setEditingCourse(null);
+    };
+
+    const handleEdit = (course) => {
+        setEditingCourse(course);
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = async (id) => {
+        if (isGuest) {
+            setCourses(courses.filter(c => c.id !== id));
+            return;
+        }
+        if (window.confirm("Are you sure you want to delete this course?")) {
+            try {
+                await deleteDoc(doc(db, "courses", id));
+            } catch (error) {
+                console.error("Error deleting course:", error);
+            }
+        }
+    };
+    
+    const gpa = calculateGPA(courses);
+
+    const groupedCourses = courses.reduce((acc, course) => {
+        const key = `${course.year} - ${course.semester}`;
+        if (!acc[key]) {
+            acc[key] = [];
+        }
+        acc[key].push(course);
+        return acc;
+    }, {});
+
     return (
-        <div className="max-w-7xl mx-auto">
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md">
-                <div className="flex justify-between items-center mb-6">
+        <div className="max-w-7xl mx-auto space-y-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Course Tracker</h2>
-                    <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md">
-                        Add Course
-                    </button>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">Log your academic journey and track your GPA.</p>
                 </div>
-                <p className="text-gray-600 dark:text-gray-400">This feature is coming soon!</p>
+                <button onClick={() => { setEditingCourse(null); setIsModalOpen(true); }} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
+                    Add Course
+                </button>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Cumulative GPA</h3>
+                <p className="text-4xl font-extrabold text-blue-600 dark:text-blue-400 mt-2">{gpa}</p>
+            </div>
+
+            <div className="space-y-6">
+                {loading ? <p>Loading courses...</p> : Object.keys(groupedCourses).length === 0 ? (
+                     <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No courses logged</h3>
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by adding your first course.</p>
+                    </div>
+                ) : (
+                    Object.entries(groupedCourses).map(([group, coursesInGroup]) => (
+                        <div key={group} className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-md">
+                            <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{group}</h4>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                                    <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                        <tr>
+                                            <th scope="col" className="px-6 py-3">Course Name</th>
+                                            <th scope="col" className="px-6 py-3">Code</th>
+                                            <th scope="col" className="px-6 py-3">Credits</th>
+                                            <th scope="col" className="px-6 py-3">Grade</th>
+                                            <th scope="col" className="px-6 py-3">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {coursesInGroup.map(course => <CourseRow key={course.id} course={course} onEdit={handleEdit} onDelete={handleDelete} />)}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {isModalOpen && (
+                <CourseModal 
+                    isOpen={isModalOpen}
+                    onClose={() => { setIsModalOpen(false); setEditingCourse(null); }}
+                    onSuccess={handleAddOrUpdate}
+                    course={editingCourse}
+                    isGuest={isGuest}
+                />
+            )}
+        </div>
+    );
+};
+
+const CourseRow = ({ course, onEdit, onDelete }) => {
+    return (
+        <tr className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+            <td className="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">{course.name}</td>
+            <td className="px-6 py-4">{course.code}</td>
+            <td className="px-6 py-4">{course.credits}</td>
+            <td className="px-6 py-4 font-bold">{course.grade}</td>
+            <td className="px-6 py-4 flex items-center gap-2">
+                <button onClick={() => onEdit(course)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">Edit</button>
+                <button onClick={() => onDelete(course.id)} className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">Delete</button>
+            </td>
+        </tr>
+    );
+};
+
+const CourseModal = ({ isOpen, onClose, onSuccess, course, isGuest }) => {
+    const { user } = useAuth();
+    const [formData, setFormData] = useState({
+        name: '', code: '', credits: '', semester: 'Fall', year: new Date().getFullYear(), grade: 'A'
+    });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState('');
+
+    const years = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
+    const grades = ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'F', 'P', 'NP'];
+
+    useEffect(() => {
+        if (course) {
+            setFormData(course);
+        } else {
+            setFormData({ name: '', code: '', credits: '', semester: 'Fall', year: new Date().getFullYear(), grade: 'A' });
+        }
+    }, [course]);
+    
+    if (!isOpen) return null;
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!formData.name || !formData.credits || formData.credits <= 0) {
+            setError('Course name and positive credits are required.');
+            return;
+        }
+        setError('');
+        setIsSubmitting(true);
+
+        const dataToSave = {
+            ...formData,
+            credits: parseFloat(formData.credits),
+            year: parseInt(formData.year, 10),
+            userId: user.uid,
+        };
+
+        try {
+            if (course) {
+                const docRef = doc(db, 'courses', course.id);
+                await updateDoc(docRef, dataToSave);
+            } else {
+                await addDoc(collection(db, 'courses'), dataToSave);
+            }
+            onSuccess();
+        } catch (err) {
+            console.error("Error saving course:", err);
+            setError("Failed to save course. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">
+                <form onSubmit={handleSubmit} className="p-6">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{course ? 'Edit' : 'Add'} Course</h2>
+                        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                    
+                    {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block mb-2 text-sm font-medium">Course Name</label>
+                            <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="e.g., General Chemistry I" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                        </div>
+                        <div>
+                            <label className="block mb-2 text-sm font-medium">Course Code</label>
+                            <input type="text" name="code" value={formData.code} onChange={handleChange} placeholder="e.g., CHEM 101" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block mb-2 text-sm font-medium">Credits</label>
+                                <input type="number" name="credits" value={formData.credits} onChange={handleChange} step="0.1" min="0" required placeholder="e.g., 4" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                            </div>
+                            <div>
+                                <label className="block mb-2 text-sm font-medium">Grade</label>
+                                <select name="grade" value={formData.grade} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
+                                    {grades.map(g => <option key={g} value={g}>{g}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block mb-2 text-sm font-medium">Semester</label>
+                                <select name="semester" value={formData.semester} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
+                                    <option>Fall</option>
+                                    <option>Spring</option>
+                                    <option>Summer</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block mb-2 text-sm font-medium">Year</label>
+                                <select name="year" value={formData.year} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
+                                    {years.map(y => <option key={y} value={y}>{y}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-6 flex justify-end gap-4">
+                        <button type="button" onClick={onClose} className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">
+                            Cancel
+                        </button>
+                        <button type="submit" disabled={isSubmitting} className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:bg-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800 dark:disabled:bg-blue-400">
+                            {isSubmitting ? 'Saving...' : 'Save'}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     );
 };
+

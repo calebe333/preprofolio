@@ -3,7 +3,6 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc, onSnapshot, orderBy, writeBatch } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Analytics } from "@vercel/analytics/react";
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -131,7 +130,6 @@ function PreProFolioApp() {
     return (
         <div className={`min-h-screen font-sans ${backgroundClass} text-gray-800 dark:text-gray-200 transition-colors duration-300`}>
             <AppContent darkMode={darkMode} toggleDarkMode={toggleDarkMode} currentPage={currentPage} setCurrentPage={setCurrentPage} />
-            <Analytics />
         </div>
     );
 }
@@ -1095,6 +1093,23 @@ const GoalModal = ({ isOpen, onClose, onSuccess, currentGoals, isGuest }) => {
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    );
+};
+
+const CoursesPage = ({ isGuest }) => {
+    // Placeholder for now
+    return (
+        <div className="max-w-7xl mx-auto">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md">
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Course Tracker</h2>
+                    <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md">
+                        Add Course
+                    </button>
+                </div>
+                <p className="text-gray-600 dark:text-gray-400">This feature is coming soon!</p>
             </div>
         </div>
     );

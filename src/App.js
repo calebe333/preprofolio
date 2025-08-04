@@ -27,6 +27,17 @@ try {
     console.error("Firebase Initialization Error:", error);
 }
 
+// --- App Constants ---
+const CATEGORIES = [
+    { name: 'Patient Care Experience', color: '#3B82F6' },
+    { name: 'Healthcare Experience', color: '#10B981' },
+    { name: 'Research', color: '#F59E0B' },
+    { name: 'Shadowing', color: '#8B5CF6' },
+    { name: 'Volunteer Work', color: '#EF4444' },
+    { name: 'Other', color: '#6B7280' },
+];
+const CATEGORY_NAMES = CATEGORIES.map(c => c.name);
+
 
 // --- Mock Data for Guest Mode ---
 const getMockData = () => ([
@@ -479,16 +490,7 @@ const Dashboard = ({ isGuest }) => {
 };
 
 const AnalyticsSummary = ({ experiences, goals }) => {
-    const categories = [
-        { name: 'Patient Care Experience', color: '#3B82F6' },
-        { name: 'Healthcare Experience', color: '#10B981' },
-        { name: 'Research', color: '#F59E0B' },
-        { name: 'Shadowing', color: '#8B5CF6' },
-        { name: 'Volunteer Work', color: '#EF4444' },
-        { name: 'Other', color: '#6B7280' },
-    ];
-
-    const summary = categories.map(cat => {
+    const summary = CATEGORIES.map(cat => {
         const current = experiences.filter(e => e.category === cat.name).reduce((acc, curr) => acc + (curr.hours || 0), 0);
         const goal = goals[cat.name] || 0;
         const progress = goal > 0 ? Math.min((current / goal) * 100, 100) : 0;
@@ -504,7 +506,7 @@ const AnalyticsSummary = ({ experiences, goals }) => {
         const month = exp.date.toDate().toLocaleString('default', { month: 'short', year: '2-digit' });
         if (!acc[month]) {
             acc[month] = { name: month };
-            categories.forEach(cat => acc[month][cat.name] = 0);
+            CATEGORIES.forEach(cat => acc[month][cat.name] = 0);
         }
         acc[month][exp.category] = (acc[month][exp.category] || 0) + exp.hours;
         return acc;
@@ -550,7 +552,7 @@ const AnalyticsSummary = ({ experiences, goals }) => {
                             <YAxis />
                             <Tooltip formatter={(value) => `${value.toFixed(1)} hrs`} />
                             <Legend />
-                            {categories.map(cat => (
+                            {CATEGORIES.map(cat => (
                                 <Bar key={cat.name} dataKey={cat.name} stackId="a" fill={cat.color} />
                             ))}
                         </BarChart>
@@ -562,7 +564,6 @@ const AnalyticsSummary = ({ experiences, goals }) => {
 };
 
 const ExperienceLog = ({ allExperiences, loading, onEdit, onDelete, filterCategory, setFilterCategory, searchTerm, setSearchTerm, dateRange, setDateRange }) => {
-    const categories = ['All', 'Patient Care Experience', 'Healthcare Experience', 'Research', 'Shadowing', 'Volunteer Work', 'Other'];
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
@@ -601,7 +602,8 @@ const ExperienceLog = ({ allExperiences, loading, onEdit, onDelete, filterCatego
                         onChange={(e) => setFilterCategory(e.target.value)}
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                     >
-                        {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                        <option value="All">All Categories</option>
+                        {CATEGORY_NAMES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                      <input type="date" name="start" value={dateRange.start} onChange={(e) => setDateRange(prev => ({...prev, start: e.target.value}))} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                     <input type="date" name="end" value={dateRange.end} onChange={(e) => setDateRange(prev => ({...prev, end: e.target.value}))} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
@@ -681,7 +683,6 @@ const ExperienceModal = ({ isOpen, onClose, onSuccess, experience, isGuest }) =>
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
-    const categories = ['Patient Care Experience', 'Healthcare Experience', 'Research', 'Shadowing', 'Volunteer Work', 'Other'];
 
     useEffect(() => {
         if (experience) {
@@ -748,12 +749,12 @@ const ExperienceModal = ({ isOpen, onClose, onSuccess, experience, isGuest }) =>
                 if (recurringData.frequency === 'Daily') {
                     shouldAdd = true;
                 } else if (recurringData.frequency === 'Weekly') {
-                    if (selectedDays.includes(currentDate.getDay())) {
+                    if (selectedDays.length === 0 || selectedDays.includes(currentDate.getDay())) {
                          shouldAdd = true;
                     }
                 } else if (recurringData.frequency === 'Bi-Weekly') {
                     const weekDiff = Math.floor((currentDate - new Date(formData.date + 'T00:00:00')) / (1000 * 60 * 60 * 24 * 7));
-                    if (weekDiff % 2 === 0 && selectedDays.includes(currentDate.getDay())) {
+                    if (weekDiff % 2 === 0 && (selectedDays.length === 0 || selectedDays.includes(currentDate.getDay()))) {
                         shouldAdd = true;
                     }
                 }
@@ -825,7 +826,7 @@ const ExperienceModal = ({ isOpen, onClose, onSuccess, experience, isGuest }) =>
                         <div>
                             <label className="block mb-2 text-sm font-medium">Category</label>
                             <select name="category" value={formData.category} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
-                                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                {CATEGORY_NAMES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                             </select>
                         </div>
                          <div>
@@ -961,6 +962,99 @@ const SettingsPage = ({ setCurrentPage }) => {
                     <div className="flex justify-end">
                         <button type="submit" disabled={isSaving} className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
                             {isSaving ? 'Saving...' : 'Save Profile'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const GoalModal = ({ isOpen, onClose, onSuccess, currentGoals, isGuest }) => {
+    const { user } = useAuth();
+    const [goals, setGoals] = useState({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        const initialGoals = CATEGORY_NAMES.reduce((acc, cat) => {
+            acc[cat] = currentGoals[cat] || '';
+            return acc;
+        }, {});
+        setGoals(initialGoals);
+    }, [currentGoals]);
+
+    if (!isOpen) return null;
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setGoals(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        
+        const goalsToSave = Object.entries(goals).reduce((acc, [key, value]) => {
+            acc[key] = parseInt(value, 10) || 0;
+            return acc;
+        }, {});
+
+        if (isGuest) {
+            console.log("Guest goals would be saved locally:", goalsToSave);
+            onSuccess();
+            setIsSubmitting(false);
+            return;
+        }
+
+        try {
+            const goalDocRef = doc(db, "goals", user.uid);
+            await setDoc(goalDocRef, goalsToSave, { merge: true });
+            onSuccess();
+        } catch (error) {
+            console.error("Error saving goals:", error);
+            alert("Failed to save goals. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">
+                <form onSubmit={handleSubmit} className="p-6">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Set Your Hour Goals</h2>
+                        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                    
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Set a target number of hours for each category to track your progress.</p>
+
+                    <div className="space-y-4">
+                        {CATEGORY_NAMES.map(cat => (
+                             <div key={cat}>
+                                <label htmlFor={cat} className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">{cat}</label>
+                                <input 
+                                    type="number" 
+                                    id={cat} 
+                                    name={cat}
+                                    value={goals[cat]}
+                                    onChange={handleChange}
+                                    min="0"
+                                    placeholder="e.g., 200" 
+                                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                                />
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="mt-6 flex justify-end gap-4">
+                        <button type="button" onClick={onClose} className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">
+                            Cancel
+                        </button>
+                        <button type="submit" disabled={isSubmitting} className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:bg-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800 dark:disabled:bg-blue-400">
+                            {isSubmitting ? 'Saving...' : 'Save Goals'}
                         </button>
                     </div>
                 </form>

@@ -154,16 +154,18 @@ const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) =
         return <LoadingScreen />;
     }
 
-    const renderPage = () => {
-        switch (currentPage) {
-            case 'dashboard':
-                return <Dashboard isGuest={isGuest} />;
-            case 'settings':
-                return <SettingsPage setCurrentPage={setCurrentPage} />;
-            default:
-                return <Dashboard isGuest={isGuest} />;
-        }
-    }
+const renderPage = () => {
+        switch (currentPage) {
+            case 'dashboard':
+                return <Dashboard isGuest={isGuest} />;
+            case 'courses': // <-- ADD THIS LINE
+                return <CoursesPage isGuest={isGuest} />; // <-- AND THIS LINE
+            case 'settings':
+                return <SettingsPage setCurrentPage={setCurrentPage} />;
+            default:
+                return <Dashboard isGuest={isGuest} />;
+        }
+    }
 
     return (
         <>

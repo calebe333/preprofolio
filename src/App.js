@@ -53,6 +53,10 @@ const getMockData = () => ({
         'Volunteer Work': 100,
         'Other': 0
     },
+    courses: [
+        { id: 'c1', name: 'General Chemistry I', code: 'CHEM 101', credits: 4, semester: 'Fall', year: 2023, grade: 'A' },
+        { id: 'c2', name: 'Biology I', code: 'BIO 101', credits: 4, semester: 'Fall', year: 2023, grade: 'A-' },
+    ]
 });
 
 // --- Authentication Context ---

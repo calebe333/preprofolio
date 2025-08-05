@@ -4,11 +4,12 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
 import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc, onSnapshot, orderBy, writeBatch, limit } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-// --- External Libraries for Export ---
+// --- External Libraries for Export & Animation ---
 // We will load these dynamically in the main component
 // jsPDF for PDF generation
 // jsPDF-AutoTable for creating tables in PDFs
 // PapaParse for CSV generation
+// Framer Motion for animations
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -123,19 +124,22 @@ function PreProFolioApp() {
     const { user, loading } = useAuth();
     const [currentPage, setCurrentPage] = useState('dashboard');
 
-    // Dynamically load external scripts for exporting
+    // Dynamically load external scripts
     useEffect(() => {
         const scripts = [
             'https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js',
             'https://unpkg.com/jspdf-autotable@3.5.23/dist/jspdf.plugin.autotable.js',
-            'https://unpkg.com/papaparse@5.3.2/papaparse.min.js'
+            'https://unpkg.com/papaparse@5.3.2/papaparse.min.js',
+            'https://cdn.jsdelivr.net/npm/framer-motion@10/dist/framer-motion.umd.js'
         ];
         
         scripts.forEach(src => {
-            const script = document.createElement('script');
-            script.src = src;
-            script.async = true;
-            document.body.appendChild(script);
+            if (!document.querySelector(`script[src="${src}"]`)) {
+                const script = document.createElement('script');
+                script.src = src;
+                script.async = true;
+                document.body.appendChild(script);
+            }
         });
     }, []);
 
@@ -162,7 +166,7 @@ function PreProFolioApp() {
     };
     
     // Apply different background for login screen
-    const backgroundClass = !user && !loading ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800';
+    const backgroundClass = !user && !loading ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-900';
 
     return (
         <div className={`min-h-screen font-sans ${backgroundClass} text-gray-800 dark:text-gray-200 transition-colors duration-300`}>
@@ -176,6 +180,18 @@ function PreProFolioApp() {
 const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) => {
     const { user, loading } = useAuth();
     const [isGuest, setIsGuest] = useState(false);
+    const [motionLoaded, setMotionLoaded] = useState(false);
+
+    useEffect(() => {
+        // Check for framer-motion to be loaded
+        const interval = setInterval(() => {
+            if (window.motion) {
+                setMotionLoaded(true);
+                clearInterval(interval);
+            }
+        }, 100);
+        return () => clearInterval(interval);
+    }, []);
 
     const handleSignOut = async () => {
         if (isGuest) {
@@ -211,6 +227,18 @@ const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) =
                 return <Dashboard isGuest={isGuest} setCurrentPage={setCurrentPage}/>;
         }
     }
+    
+    const pageVariants = {
+        initial: { opacity: 0, y: 20 },
+        in: { opacity: 1, y: 0 },
+        out: { opacity: 0, y: -20 }
+    };
+
+    const pageTransition = {
+        type: 'tween',
+        ease: 'anticipate',
+        duration: 0.5
+    };
 
     return (
         <>
@@ -218,7 +246,20 @@ const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) =
             <main>
                 {user || isGuest ? (
                     <div className="p-4 sm:p-6 lg:p-8">
-                        {renderPage()}
+                        {motionLoaded ? (
+                            <window.motion.AnimatePresence mode="wait">
+                                <window.motion.div
+                                    key={currentPage}
+                                    initial="initial"
+                                    animate="in"
+                                    exit="out"
+                                    variants={pageVariants}
+                                    transition={pageTransition}
+                                >
+                                    {renderPage()}
+                                </window.motion.div>
+                            </window.motion.AnimatePresence>
+                        ) : renderPage() }
                     </div>
                 ) : <LoginScreen onGuestLogin={() => setIsGuest(true)} />}
             </main>
@@ -230,7 +271,7 @@ const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) =
 
 const Header = ({ darkMode, setDarkMode, onSignOut, showSignOut, setCurrentPage }) => {
     return (
-        <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-md sticky top-0 z-40">
+        <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700/50 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
                     <button onClick={() => setCurrentPage('dashboard')} className="flex items-center space-x-2">
@@ -240,26 +281,26 @@ const Header = ({ darkMode, setDarkMode, onSignOut, showSignOut, setCurrentPage 
                         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">PreProFolio</h1>
                     </button>
                     <div className="flex items-center space-x-1 sm:space-x-2">
-                        <button onClick={() => setCurrentPage('experiences')} title="Experiences" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
+                        <button onClick={() => setCurrentPage('experiences')} title="Experiences" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none transform hover:scale-110 transition-transform">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                         </button>
-                        <button onClick={() => setCurrentPage('courses')} title="Courses" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
+                        <button onClick={() => setCurrentPage('courses')} title="Courses" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none transform hover:scale-110 transition-transform">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                         </button>
-                        <button onClick={() => setCurrentPage('export')} title="Export Report" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
+                        <button onClick={() => setCurrentPage('export')} title="Export Report" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none transform hover:scale-110 transition-transform">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                         </button>
-                        <button onClick={() => setCurrentPage('settings')} title="Settings" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
+                        <button onClick={() => setCurrentPage('settings')} title="Settings" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none transform hover:scale-110 transition-transform">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         </button>
-                        <button onClick={setDarkMode} title="Toggle Dark Mode" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
+                        <button onClick={setDarkMode} title="Toggle Dark Mode" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none transform hover:scale-110 transition-transform">
                             {darkMode ? 
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg> : 
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
                             }
                         </button>
                         {showSignOut && (
-                            <button onClick={onSignOut} className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                            <button onClick={onSignOut} className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105">
                                 Sign Out
                             </button>
                         )}
@@ -336,7 +377,7 @@ const LoginScreen = ({ onGuestLogin }) => {
                         </div>
                         <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">The smart, secure, and simple way for pre-health students to track their experience hours and prepare for professional school.</p>
                         <div className="mt-10 flex items-center justify-center gap-x-6">
-                           <button onClick={handleSignIn} className="flex items-center justify-center rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+                           <button onClick={handleSignIn} className="flex items-center justify-center rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transform hover:scale-105 transition-transform duration-300">
                                 <svg className="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C42.012 35.836 44 30.138 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
                                 Sign In with Google
                             </button>
@@ -345,7 +386,7 @@ const LoginScreen = ({ onGuestLogin }) => {
                     </div>
                 </div>
             </div>
-            <div className="bg-gray-50 dark:bg-gray-800 py-24 sm:py-32">
+            <div className="bg-gray-50 dark:bg-gray-900 py-24 sm:py-32">
                 <div className="mx-auto max-w-7xl px-6 lg:px-8">
                     <div className="mx-auto max-w-2xl lg:text-center">
                         <h2 className="text-base font-semibold leading-7 text-blue-600 dark:text-blue-400">Built for Your Journey</h2>
@@ -441,6 +482,27 @@ const Dashboard = ({ isGuest, setCurrentPage }) => {
 
         return () => unsubscribes.forEach(unsub => unsub());
     }, [user, isGuest]);
+    
+    const motion = window.motion;
+
+    const containerVariants = {
+        hidden: { opacity: 1 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.15
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: {
+            y: 0,
+            opacity: 1,
+            transition: { type: 'spring', stiffness: 100 }
+        }
+    };
 
     const displayName = isGuest ? "Guest" : user?.displayName;
 
@@ -454,29 +516,61 @@ const Dashboard = ({ isGuest, setCurrentPage }) => {
                     <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome back, {displayName}!</p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    <button onClick={() => setIsGoalModalOpen(true)} className="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
+                    <button onClick={() => setIsGoalModalOpen(true)} className="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 transform hover:scale-105 transition-transform">
                         Set Goals
                     </button>
-                    <button onClick={() => setCurrentPage('experiences')} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
+                    <button onClick={() => setCurrentPage('experiences')} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 transform hover:scale-105 transition-transform">
                         Log Experience
                     </button>
                 </div>
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                    <GpaSummary courses={courses} />
-                    <RecentExperiences experiences={experiences} setCurrentPage={setCurrentPage} />
+            {motion ? (
+                <motion.div 
+                    className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                >
+                    <motion.div className="lg:col-span-2 space-y-6" variants={itemVariants}>
+                        <GpaSummary courses={courses} />
+                        <RecentExperiences experiences={experiences} setCurrentPage={setCurrentPage} />
+                    </motion.div>
+                    <motion.div className="lg:col-span-1" variants={itemVariants}>
+                        <ProgressSummary experiences={experiences} goals={goals} />
+                    </motion.div>
+                    <motion.div className="lg:col-span-3" variants={itemVariants}>
+                        <MonthlyChart experiences={experiences} />
+                    </motion.div>
+                </motion.div>
+            ) : ( 
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 space-y-6">
+                        <GpaSummary courses={courses} />
+                        <RecentExperiences experiences={experiences} setCurrentPage={setCurrentPage} />
+                    </div>
+                    <div className="lg:col-span-1">
+                        <ProgressSummary experiences={experiences} goals={goals} />
+                    </div>
+                     <div className="lg:col-span-3">
+                        <MonthlyChart experiences={experiences} />
+                    </div>
                 </div>
-                <div className="lg:col-span-1">
-                    <ProgressSummary experiences={experiences} goals={goals} />
-                </div>
-            </div>
-            
-            <MonthlyChart experiences={experiences} />
+            )}
 
-            {isGoalModalOpen && (
-                <GoalModal
+            {motion && <motion.AnimatePresence>
+                {isGoalModalOpen && (
+                    <GoalModal
+                        isOpen={isGoalModalOpen}
+                        onClose={() => setIsGoalModalOpen(false)}
+                        onSuccess={() => setIsGoalModalOpen(false)}
+                        currentGoals={goals}
+                        isGuest={isGuest}
+                    />
+                )}
+            </motion.AnimatePresence>}
+            {!motion && isGoalModalOpen && (
+                 <GoalModal
                     isOpen={isGoalModalOpen}
                     onClose={() => setIsGoalModalOpen(false)}
                     onSuccess={() => setIsGoalModalOpen(false)}
@@ -493,8 +587,11 @@ const GpaSummary = ({ courses }) => {
     const scienceGpa = calculateGPA(courses, true);
 
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Academic Summary</h3>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                <span>Academic Summary</span>
+            </h3>
             <div className="flex justify-around items-center text-center">
                 <div>
                     <h4 className="text-md font-semibold text-gray-500 dark:text-gray-400">Cumulative GPA</h4>
@@ -510,6 +607,22 @@ const GpaSummary = ({ courses }) => {
     );
 };
 
+const AnimatedProgressBar = ({ progress, color }) => {
+    const motion = window.motion;
+    if (!motion) {
+        return <div className="h-full rounded-full" style={{ width: `${progress}%`, backgroundColor: color }}></div>;
+    }
+    return (
+        <motion.div 
+            className="h-full rounded-full"
+            style={{ backgroundColor: color, originX: 0 }}
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: progress / 100 }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+        />
+    );
+}
+
 const ProgressSummary = ({ experiences, goals }) => {
     const summary = CATEGORIES.map(cat => {
         const current = experiences.filter(e => e.category === cat.name).reduce((acc, curr) => acc + (curr.hours || 0), 0);
@@ -523,7 +636,7 @@ const ProgressSummary = ({ experiences, goals }) => {
     const totalProgress = totalGoal > 0 ? Math.min((totalHours / totalGoal) * 100, 100) : 0;
 
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md h-full">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 h-full">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Hour Progress</h3>
             <div className="space-y-1 mb-4">
                 <div className="flex justify-between items-baseline mb-1">
@@ -531,7 +644,7 @@ const ProgressSummary = ({ experiences, goals }) => {
                     <span className="text-xl font-extrabold text-blue-600 dark:text-blue-400">{totalHours.toFixed(1)} / {totalGoal}</span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                    <div className="bg-blue-600 h-3 rounded-full" style={{ width: `${totalProgress}%` }}></div>
+                    <AnimatedProgressBar progress={totalProgress} color={'#3B82F6'} />
                 </div>
             </div>
             <div className="space-y-3">
@@ -542,7 +655,7 @@ const ProgressSummary = ({ experiences, goals }) => {
                             <span className="text-gray-500 dark:text-gray-400">{item.current.toFixed(1)} / {item.goal} hrs</span>
                         </div>
                         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div className="h-2 rounded-full" style={{ width: `${item.progress}%`, backgroundColor: item.color }}></div>
+                           <AnimatedProgressBar progress={item.progress} color={item.color} />
                         </div>
                     </div>
                 ))}
@@ -554,14 +667,14 @@ const ProgressSummary = ({ experiences, goals }) => {
 const RecentExperiences = ({ experiences, setCurrentPage }) => {
     const recent = experiences.slice(0, 4);
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">Recent Experiences</h3>
                 <button onClick={() => setCurrentPage('experiences')} className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">View All</button>
             </div>
             <div className="space-y-3">
                 {recent.length > 0 ? recent.map(exp => (
-                    <div key={exp.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                    <div key={exp.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                         <div>
                             <p className="font-semibold text-gray-800 dark:text-gray-200">{exp.location}</p>
                             <p className="text-sm text-gray-500 dark:text-gray-400">{exp.category}</p>
@@ -592,7 +705,7 @@ const MonthlyChart = ({ experiences }) => {
     const sortedBarData = Object.values(monthlyData).sort((a, b) => new Date(a.name) - new Date(b.name));
 
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Monthly Hour Distribution</h3>
             {sortedBarData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={350}>
@@ -622,6 +735,7 @@ const ExperiencesPage = ({ isGuest }) => {
     const [filterCategory, setFilterCategory] = useState('All');
     const [searchTerm, setSearchTerm] = useState('');
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
+    const motion = window.motion;
 
     useEffect(() => {
         if (isGuest) {
@@ -705,7 +819,7 @@ const ExperiencesPage = ({ isGuest }) => {
                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Experience Log</h2>
                     <p className="text-gray-600 dark:text-gray-400 mt-1">Manage all your logged activities in one place.</p>
                 </div>
-                <button onClick={() => { setEditingExperience(null); setIsExperienceModalOpen(true); }} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
+                <button onClick={() => { setEditingExperience(null); setIsExperienceModalOpen(true); }} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 transform hover:scale-105 transition-transform">
                     Log New Experience
                 </button>
             </div>
@@ -723,8 +837,19 @@ const ExperiencesPage = ({ isGuest }) => {
                 setDateRange={setDateRange}
             />
 
-            {isExperienceModalOpen && (
-                <ExperienceModal 
+            {motion && <motion.AnimatePresence>
+                {isExperienceModalOpen && (
+                    <ExperienceModal 
+                        isOpen={isExperienceModalOpen}
+                        onClose={() => { setIsExperienceModalOpen(false); setEditingExperience(null); }}
+                        onSuccess={handleAddOrUpdate}
+                        experience={editingExperience}
+                        isGuest={isGuest}
+                    />
+                )}
+            </motion.AnimatePresence>}
+             {!motion && isExperienceModalOpen && (
+                 <ExperienceModal 
                     isOpen={isExperienceModalOpen}
                     onClose={() => { setIsExperienceModalOpen(false); setEditingExperience(null); }}
                     onSuccess={handleAddOrUpdate}
@@ -759,7 +884,7 @@ const ExperienceLog = ({ allExperiences, loading, onEdit, onDelete, filterCatego
     }, [filterCategory, searchTerm, dateRange]);
 
     return (
-        <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-md">
+        <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-lg">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">All Experiences</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full lg:w-auto">
@@ -857,6 +982,7 @@ const ExperienceModal = ({ isOpen, onClose, onSuccess, experience, isGuest }) =>
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const motion = window.motion;
 
     useEffect(() => {
         if (experience) {
@@ -972,97 +1098,104 @@ const ExperienceModal = ({ isOpen, onClose, onSuccess, experience, isGuest }) =>
         }
     };
 
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">
-                <form onSubmit={handleSubmit} className="p-6">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{experience ? 'Edit' : 'Log'} Experience</h2>
-                        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
+    const modalContent = (
+        <form onSubmit={handleSubmit} className="p-6">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{experience ? 'Edit' : 'Log'} Experience</h2>
+                <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+            {/* Form fields... */}
+            <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block mb-2 text-sm font-medium">Date</label>
+                        <input type="date" name="date" value={formData.date} onChange={handleChange} required className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
                     </div>
-                    
-                    {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-
-                    <div className="space-y-4">
-                        {/* Standard Fields */}
+                    <div>
+                        <label className="block mb-2 text-sm font-medium">Hours</label>
+                        <input type="number" name="hours" value={formData.hours} onChange={handleChange} step="0.1" min="0" required placeholder="e.g., 8.5" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                    </div>
+                </div>
+                <div>
+                    <label className="block mb-2 text-sm font-medium">Category</label>
+                    <select name="category" value={formData.category} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
+                        {CATEGORY_NAMES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
+                </div>
+                 <div>
+                    <label className="block mb-2 text-sm font-medium">Location / Organization</label>
+                    <input type="text" name="location" value={formData.location} onChange={handleChange} required placeholder="e.g., City General Hospital" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                </div>
+                <div>
+                    <label className="block mb-2 text-sm font-medium">Notes / Reflections</label>
+                    <textarea name="notes" value={formData.notes} onChange={handleChange} rows="3" placeholder="Describe your responsibilities..." className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600"></textarea>
+                </div>
+                {!experience && (
+                    <div className="flex items-center pt-2">
+                        <input id="isRecurring" type="checkbox" checked={isRecurring} onChange={(e) => setIsRecurring(e.target.checked)} className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                        <label htmlFor="isRecurring" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">This is a recurring entry</label>
+                    </div>
+                )}
+                {isRecurring && (
+                    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label className="block mb-2 text-sm font-medium">Date</label>
-                                <input type="date" name="date" value={formData.date} onChange={handleChange} required className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                                <label className="block mb-2 text-sm font-medium">End Date</label>
+                                <input type="date" name="endDate" value={recurringData.endDate} onChange={handleRecurringChange} required className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
                             </div>
                             <div>
-                                <label className="block mb-2 text-sm font-medium">Hours</label>
-                                <input type="number" name="hours" value={formData.hours} onChange={handleChange} step="0.1" min="0" required placeholder="e.g., 8.5" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                                <label className="block mb-2 text-sm font-medium">Frequency</label>
+                                <select name="frequency" value={recurringData.frequency} onChange={handleRecurringChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
+                                    <option>Daily</option>
+                                    <option>Weekly</option>
+                                    <option>Bi-Weekly</option>
+                                </select>
                             </div>
                         </div>
-                        <div>
-                            <label className="block mb-2 text-sm font-medium">Category</label>
-                            <select name="category" value={formData.category} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
-                                {CATEGORY_NAMES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                            </select>
-                        </div>
-                         <div>
-                            <label className="block mb-2 text-sm font-medium">Location / Organization</label>
-                            <input type="text" name="location" value={formData.location} onChange={handleChange} required placeholder="e.g., City General Hospital" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
-                        </div>
-                        <div>
-                            <label className="block mb-2 text-sm font-medium">Notes / Reflections</label>
-                            <textarea name="notes" value={formData.notes} onChange={handleChange} rows="3" placeholder="Describe your responsibilities..." className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600"></textarea>
-                        </div>
-                        
-                        {/* Recurring Entry Toggle */}
-                        {!experience && (
-                            <div className="flex items-center pt-2">
-                                <input id="isRecurring" type="checkbox" checked={isRecurring} onChange={(e) => setIsRecurring(e.target.checked)} className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                                <label htmlFor="isRecurring" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">This is a recurring entry</label>
-                            </div>
-                        )}
-
-                        {/* Recurring Fields */}
-                        {isRecurring && (
-                            <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg space-y-4">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block mb-2 text-sm font-medium">End Date</label>
-                                        <input type="date" name="endDate" value={recurringData.endDate} onChange={handleRecurringChange} required className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
-                                    </div>
-                                    <div>
-                                        <label className="block mb-2 text-sm font-medium">Frequency</label>
-                                        <select name="frequency" value={recurringData.frequency} onChange={handleRecurringChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
-                                            <option>Daily</option>
-                                            <option>Weekly</option>
-                                            <option>Bi-Weekly</option>
-                                        </select>
-                                    </div>
+                        {(recurringData.frequency === 'Weekly' || recurringData.frequency === 'Bi-Weekly') && (
+                            <div>
+                                <label className="block mb-2 text-sm font-medium">Repeat on</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {Object.keys(recurringData.daysOfWeek).map(day => (
+                                        <button type="button" key={day} onClick={() => handleDayToggle(day)} className={`px-3 py-1 text-sm rounded-full ${recurringData.daysOfWeek[day] ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>
+                                            {day}
+                                        </button>
+                                    ))}
                                 </div>
-                                {(recurringData.frequency === 'Weekly' || recurringData.frequency === 'Bi-Weekly') && (
-                                    <div>
-                                        <label className="block mb-2 text-sm font-medium">Repeat on</label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {Object.keys(recurringData.daysOfWeek).map(day => (
-                                                <button type="button" key={day} onClick={() => handleDayToggle(day)} className={`px-3 py-1 text-sm rounded-full ${recurringData.daysOfWeek[day] ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>
-                                                    {day}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         )}
                     </div>
-
-                    <div className="mt-6 flex justify-end gap-4">
-                        <button type="button" onClick={onClose} className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">
-                            Cancel
-                        </button>
-                        <button type="submit" disabled={isSubmitting} className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:bg-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800 dark:disabled:bg-blue-400">
-                            {isSubmitting ? 'Saving...' : 'Save'}
-                        </button>
-                    </div>
-                </form>
+                )}
             </div>
+            <div className="mt-6 flex justify-end gap-4">
+                <button type="button" onClick={onClose} className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">
+                    Cancel
+                </button>
+                <button type="submit" disabled={isSubmitting} className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:bg-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800 dark:disabled:bg-blue-400">
+                    {isSubmitting ? 'Saving...' : 'Save'}
+                </button>
+            </div>
+        </form>
+    );
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
+            {motion ? (
+                 <motion.div 
+                    className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto"
+                    initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    {modalContent}
+                </motion.div>
+            ) : (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">{modalContent}</div>
+            )}
         </div>
     );
 };
@@ -1112,7 +1245,7 @@ const SettingsPage = ({ setCurrentPage }) => {
 
     return (
         <div className="max-w-4xl mx-auto">
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg">
                 <div className="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-6 border-b border-gray-200 dark:border-gray-700">
                     <img src={user.photoURL} alt="Profile" className="w-24 h-24 rounded-full" />
                     <div>
@@ -1167,6 +1300,7 @@ const GoalModal = ({ isOpen, onClose, onSuccess, currentGoals, isGuest }) => {
     const { user } = useAuth();
     const [goals, setGoals] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const motion = window.motion;
 
     useEffect(() => {
         const initialGoals = CATEGORY_NAMES.reduce((acc, cat) => {
@@ -1211,47 +1345,58 @@ const GoalModal = ({ isOpen, onClose, onSuccess, currentGoals, isGuest }) => {
         }
     };
 
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">
-                <form onSubmit={handleSubmit} className="p-6">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Set Your Hour Goals</h2>
-                        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
-                    </div>
-                    
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Set a target number of hours for each category to track your progress.</p>
-
-                    <div className="space-y-4">
-                        {CATEGORY_NAMES.map(cat => (
-                             <div key={cat}>
-                                <label htmlFor={cat} className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">{cat}</label>
-                                <input 
-                                    type="number" 
-                                    id={cat} 
-                                    name={cat}
-                                    value={goals[cat]}
-                                    onChange={handleChange}
-                                    min="0"
-                                    placeholder="e.g., 200" 
-                                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
-                                />
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="mt-6 flex justify-end gap-4">
-                        <button type="button" onClick={onClose} className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">
-                            Cancel
-                        </button>
-                        <button type="submit" disabled={isSubmitting} className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:bg-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800 dark:disabled:bg-blue-400">
-                            {isSubmitting ? 'Saving...' : 'Save Goals'}
-                        </button>
-                    </div>
-                </form>
+    const modalContent = (
+         <form onSubmit={handleSubmit} className="p-6">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Set Your Hour Goals</h2>
+                <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
             </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Set a target number of hours for each category to track your progress.</p>
+            <div className="space-y-4">
+                {CATEGORY_NAMES.map(cat => (
+                     <div key={cat}>
+                        <label htmlFor={cat} className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">{cat}</label>
+                        <input 
+                            type="number" 
+                            id={cat} 
+                            name={cat}
+                            value={goals[cat]}
+                            onChange={handleChange}
+                            min="0"
+                            placeholder="e.g., 200" 
+                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                        />
+                    </div>
+                ))}
+            </div>
+            <div className="mt-6 flex justify-end gap-4">
+                <button type="button" onClick={onClose} className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">
+                    Cancel
+                </button>
+                <button type="submit" disabled={isSubmitting} className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:bg-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800 dark:disabled:bg-blue-400">
+                    {isSubmitting ? 'Saving...' : 'Save Goals'}
+                </button>
+            </div>
+        </form>
+    );
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
+            {motion ? (
+                 <motion.div 
+                    className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto"
+                    initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    {modalContent}
+                </motion.div>
+            ) : (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">{modalContent}</div>
+            )}
         </div>
     );
 };
@@ -1319,6 +1464,7 @@ const CourseLog = ({ isGuest }) => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCourse, setEditingCourse] = useState(null);
+    const motion = window.motion;
 
     useEffect(() => {
         if (isGuest) {
@@ -1383,17 +1529,17 @@ const CourseLog = ({ isGuest }) => {
     return (
         <div className="space-y-8">
             <div className="flex justify-end">
-                 <button onClick={() => { setEditingCourse(null); setIsModalOpen(true); }} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
+                 <button onClick={() => { setEditingCourse(null); setIsModalOpen(true); }} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 transform hover:scale-105 transition-transform">
                     Add Course
                 </button>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">Cumulative GPA</h3>
                     <p className="text-4xl font-extrabold text-blue-600 dark:text-blue-400 mt-2">{cumulativeGpa}</p>
                 </div>
-                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">Science GPA (BCPM)</h3>
                     <p className="text-4xl font-extrabold text-green-600 dark:text-green-400 mt-2">{scienceGpa}</p>
                 </div>
@@ -1401,14 +1547,14 @@ const CourseLog = ({ isGuest }) => {
 
             <div className="space-y-6">
                 {loading ? <p>Loading courses...</p> : Object.keys(groupedCourses).length === 0 ? (
-                     <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-md">
+                     <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
                         <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                         <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No courses logged</h3>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by adding your first course.</p>
                     </div>
                 ) : (
                     Object.entries(groupedCourses).map(([group, coursesInGroup]) => (
-                        <div key={group} className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-md">
+                        <div key={group} className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-lg">
                             <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{group}</h4>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
@@ -1432,8 +1578,19 @@ const CourseLog = ({ isGuest }) => {
                 )}
             </div>
 
-            {isModalOpen && (
-                <CourseModal 
+            {motion && <motion.AnimatePresence>
+                {isModalOpen && (
+                    <CourseModal 
+                        isOpen={isModalOpen}
+                        onClose={() => { setIsModalOpen(false); setEditingCourse(null); }}
+                        onSuccess={handleAddOrUpdate}
+                        course={editingCourse}
+                        isGuest={isGuest}
+                    />
+                )}
+            </motion.AnimatePresence>}
+            {!motion && isModalOpen && (
+                 <CourseModal 
                     isOpen={isModalOpen}
                     onClose={() => { setIsModalOpen(false); setEditingCourse(null); }}
                     onSuccess={handleAddOrUpdate}
@@ -1605,7 +1762,7 @@ const CoursePlanner = ({ isGuest }) => {
     return (
         <div className="flex flex-col lg:flex-row gap-6">
             {/* Course Bank */}
-            <div className="lg:w-1/3 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md flex flex-col">
+            <div className="lg:w-1/3 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg flex flex-col">
                 <h3 className="text-lg font-bold mb-4">Course Bank</h3>
                 <div className="space-y-2 flex-grow overflow-y-auto pr-2">
                     {unassignedCourses.map(course => (
@@ -1657,7 +1814,7 @@ const CoursePlanner = ({ isGuest }) => {
                             key={semester.id}
                             onDragOver={handleDragOver}
                             onDrop={(e) => handleDrop(e, semester.id)}
-                            className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md min-h-[150px] border-2 border-dashed border-gray-300 dark:border-gray-600"
+                            className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg min-h-[150px] border-2 border-dashed border-gray-300 dark:border-gray-600"
                         >
                             <h4 className="font-bold border-b border-gray-200 dark:border-gray-700 pb-2 mb-2">{semester.name}</h4>
                             <div className="space-y-2">
@@ -1771,6 +1928,7 @@ const CourseModal = ({ isOpen, onClose, onSuccess, course, isGuest }) => {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const motion = window.motion;
 
     const years = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
     const grades = ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'F', 'P', 'NP'];
@@ -1823,80 +1981,91 @@ const CourseModal = ({ isOpen, onClose, onSuccess, course, isGuest }) => {
         }
     };
 
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">
-                <form onSubmit={handleSubmit} className="p-6">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{course ? 'Edit' : 'Add'} Course</h2>
-                        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
-                    </div>
-                    
-                    {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block mb-2 text-sm font-medium">Course Name</label>
-                            <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="e.g., General Chemistry I" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
-                        </div>
-                        <div>
-                            <label className="block mb-2 text-sm font-medium">Course Code</label>
-                            <input type="text" name="code" value={formData.code} onChange={handleChange} placeholder="e.g., CHEM 101" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block mb-2 text-sm font-medium">Credits</label>
-                                <input type="number" name="credits" value={formData.credits} onChange={handleChange} step="0.1" min="0" required placeholder="e.g., 4" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
-                            </div>
-                            <div>
-                                <label className="block mb-2 text-sm font-medium">Grade</label>
-                                <select name="grade" value={formData.grade} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
-                                    {grades.map(g => <option key={g} value={g}>{g}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block mb-2 text-sm font-medium">Semester</label>
-                                <select name="semester" value={formData.semester} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
-                                    <option>Fall</option>
-                                    <option>Spring</option>
-                                    <option>Summer</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block mb-2 text-sm font-medium">Year</label>
-                                <select name="year" value={formData.year} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
-                                    {years.map(y => <option key={y} value={y}>{y}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                        <div className="pt-2">
-                            <label className="flex items-center cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    name="isScience"
-                                    checked={formData.isScience}
-                                    onChange={handleChange}
-                                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                />
-                                <span className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">This is a science course (for BCPM GPA)</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div className="mt-6 flex justify-end gap-4">
-                        <button type="button" onClick={onClose} className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">
-                            Cancel
-                        </button>
-                        <button type="submit" disabled={isSubmitting} className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:bg-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800 dark:disabled:bg-blue-400">
-                            {isSubmitting ? 'Saving...' : 'Save'}
-                        </button>
-                    </div>
-                </form>
+    const modalContent = (
+        <form onSubmit={handleSubmit} className="p-6">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{course ? 'Edit' : 'Add'} Course</h2>
+                <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
             </div>
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+            <div className="space-y-4">
+                <div>
+                    <label className="block mb-2 text-sm font-medium">Course Name</label>
+                    <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="e.g., General Chemistry I" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                </div>
+                <div>
+                    <label className="block mb-2 text-sm font-medium">Course Code</label>
+                    <input type="text" name="code" value={formData.code} onChange={handleChange} placeholder="e.g., CHEM 101" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block mb-2 text-sm font-medium">Credits</label>
+                        <input type="number" name="credits" value={formData.credits} onChange={handleChange} step="0.1" min="0" required placeholder="e.g., 4" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                    </div>
+                    <div>
+                        <label className="block mb-2 text-sm font-medium">Grade</label>
+                        <select name="grade" value={formData.grade} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
+                            {grades.map(g => <option key={g} value={g}>{g}</option>)}
+                        </select>
+                    </div>
+                </div>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block mb-2 text-sm font-medium">Semester</label>
+                        <select name="semester" value={formData.semester} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
+                            <option>Fall</option>
+                            <option>Spring</option>
+                            <option>Summer</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block mb-2 text-sm font-medium">Year</label>
+                        <select name="year" value={formData.year} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
+                            {years.map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                    </div>
+                </div>
+                <div className="pt-2">
+                    <label className="flex items-center cursor-pointer">
+                        <input
+                            type="checkbox"
+                            name="isScience"
+                            checked={formData.isScience}
+                            onChange={handleChange}
+                            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                        />
+                        <span className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">This is a science course (for BCPM GPA)</span>
+                    </label>
+                </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-4">
+                <button type="button" onClick={onClose} className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">
+                    Cancel
+                </button>
+                <button type="submit" disabled={isSubmitting} className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:bg-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800 dark:disabled:bg-blue-400">
+                    {isSubmitting ? 'Saving...' : 'Save'}
+                </button>
+            </div>
+        </form>
+    );
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
+            {motion ? (
+                 <motion.div 
+                    className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto"
+                    initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    {modalContent}
+                </motion.div>
+            ) : (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">{modalContent}</div>
+            )}
         </div>
     );
 };
@@ -2101,7 +2270,7 @@ const ExportPage = ({ isGuest }) => {
                     <p className="text-gray-600 dark:text-gray-400 mt-1">Generate a comprehensive report of your academic and experiential progress.</p>
                 </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* PDF Export */}
                     <div className="flex flex-col items-center text-center p-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-700">

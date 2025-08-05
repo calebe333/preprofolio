@@ -5,14 +5,14 @@ import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // --- Firebase Configuration ---
+// NOTE: Replace with your actual Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAKE-fU2KRs9flQEbBZdL4PZqKZT-irrKU",
-  authDomain: "preprofolio.firebaseapp.com",
-  projectId: "preprofolio",
-  storageBucket: "preprofolio.appspot.com",
-  messagingSenderId: "692987377324",
-  appId: "1:692987377324:web:5b2c3b5e7ce7ed5e4f5109",
-  measurementId: "G-EE6Z37FY80"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
 // --- Initialize Firebase ---
@@ -53,6 +53,11 @@ const getMockData = () => ({
         'Volunteer Work': 100,
         'Other': 0
     },
+    courses: [
+        { id: 'mock_course_1', name: 'General Chemistry I', code: 'CHEM 101', credits: 4, grade: 'A', semester: 'Fall', year: 2023, isScience: true },
+        { id: 'mock_course_2', name: 'Introduction to Psychology', code: 'PSYC 101', credits: 3, grade: 'B+', semester: 'Fall', year: 2023, isScience: false },
+        { id: 'mock_course_3', name: 'Organic Chemistry I', code: 'CHEM 231', credits: 4, grade: 'A-', semester: 'Spring', year: 2024, isScience: true },
+    ]
 });
 
 // --- Authentication Context ---
@@ -154,18 +159,18 @@ const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) =
         return <LoadingScreen />;
     }
 
-const renderPage = () => {
-        switch (currentPage) {
-            case 'dashboard':
-                return <Dashboard isGuest={isGuest} />;
-            case 'courses': // <-- ADD THIS LINE
-                return <CoursesPage isGuest={isGuest} />; // <-- AND THIS LINE
-            case 'settings':
-                return <SettingsPage setCurrentPage={setCurrentPage} />;
-            default:
-                return <Dashboard isGuest={isGuest} />;
-        }
-    }
+    const renderPage = () => {
+        switch (currentPage) {
+            case 'dashboard':
+                return <Dashboard isGuest={isGuest} />;
+            case 'courses':
+                return <CoursesPage isGuest={isGuest} />;
+            case 'settings':
+                return <SettingsPage setCurrentPage={setCurrentPage} />;
+            default:
+                return <Dashboard isGuest={isGuest} />;
+        }
+    }
 
     return (
         <>
@@ -819,7 +824,7 @@ const ExperienceModal = ({ isOpen, onClose, onSuccess, experience, isGuest }) =>
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{experience ? 'Edit' : 'Log'} Experience</h2>
                         <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                     </div>
                     
@@ -1058,7 +1063,7 @@ const GoalModal = ({ isOpen, onClose, onSuccess, currentGoals, isGuest }) => {
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Set Your Hour Goals</h2>
                         <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                     </div>
                     
@@ -1097,7 +1102,7 @@ const GoalModal = ({ isOpen, onClose, onSuccess, currentGoals, isGuest }) => {
 };
 
 // --- Helper function to calculate GPA ---
-const calculateGPA = (courses) => {
+const calculateGPA = (courses, scienceOnly = false) => {
     const gradePoints = {
         'A': 4.0, 'A-': 3.7, 'B+': 3.3, 'B': 3.0, 'B-': 2.7,
         'C+': 2.3, 'C': 2.0, 'C-': 1.7, 'D+': 1.3, 'D': 1.0, 'F': 0.0
@@ -1105,10 +1110,12 @@ const calculateGPA = (courses) => {
     let totalPoints = 0;
     let totalCredits = 0;
 
-    courses.forEach(course => {
+    const coursesToCalculate = scienceOnly ? courses.filter(c => c.isScience) : courses;
+
+    coursesToCalculate.forEach(course => {
         if (gradePoints[course.grade] !== undefined && course.credits > 0) {
-            totalPoints += gradePoints[course.grade] * course.credits;
-            totalCredits += course.credits;
+            totalPoints += gradePoints[course.grade] * parseFloat(course.credits);
+            totalCredits += parseFloat(course.credits);
         }
     });
 
@@ -1127,7 +1134,7 @@ const CoursesPage = ({ isGuest }) => {
 
     useEffect(() => {
         if (isGuest) {
-            setCourses(getMockData().courses);
+            setCourses(getMockData().courses || []);
             setLoading(false);
             return;
         }
@@ -1173,7 +1180,8 @@ const CoursesPage = ({ isGuest }) => {
         }
     };
     
-    const gpa = calculateGPA(courses);
+    const cumulativeGpa = calculateGPA(courses);
+    const scienceGpa = calculateGPA(courses, true);
 
     const groupedCourses = courses.reduce((acc, course) => {
         const key = `${course.year} - ${course.semester}`;
@@ -1196,9 +1204,15 @@ const CoursesPage = ({ isGuest }) => {
                 </button>
             </div>
             
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Cumulative GPA</h3>
-                <p className="text-4xl font-extrabold text-blue-600 dark:text-blue-400 mt-2">{gpa}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Cumulative GPA</h3>
+                    <p className="text-4xl font-extrabold text-blue-600 dark:text-blue-400 mt-2">{cumulativeGpa}</p>
+                </div>
+                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Science GPA (BCPM)</h3>
+                    <p className="text-4xl font-extrabold text-green-600 dark:text-green-400 mt-2">{scienceGpa}</p>
+                </div>
             </div>
 
             <div className="space-y-6">
@@ -1220,6 +1234,7 @@ const CoursesPage = ({ isGuest }) => {
                                             <th scope="col" className="px-6 py-3">Code</th>
                                             <th scope="col" className="px-6 py-3">Credits</th>
                                             <th scope="col" className="px-6 py-3">Grade</th>
+                                            <th scope="col" className="px-6 py-3 text-center">Science</th>
                                             <th scope="col" className="px-6 py-3">Actions</th>
                                         </tr>
                                     </thead>
@@ -1253,6 +1268,13 @@ const CourseRow = ({ course, onEdit, onDelete }) => {
             <td className="px-6 py-4">{course.code}</td>
             <td className="px-6 py-4">{course.credits}</td>
             <td className="px-6 py-4 font-bold">{course.grade}</td>
+            <td className="px-6 py-4 text-center">
+                {course.isScience && (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 inline-block" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                )}
+            </td>
             <td className="px-6 py-4 flex items-center gap-2">
                 <button onClick={() => onEdit(course)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">Edit</button>
                 <button onClick={() => onDelete(course.id)} className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">Delete</button>
@@ -1264,7 +1286,7 @@ const CourseRow = ({ course, onEdit, onDelete }) => {
 const CourseModal = ({ isOpen, onClose, onSuccess, course, isGuest }) => {
     const { user } = useAuth();
     const [formData, setFormData] = useState({
-        name: '', code: '', credits: '', semester: 'Fall', year: new Date().getFullYear(), grade: 'A'
+        name: '', code: '', credits: '', semester: 'Fall', year: new Date().getFullYear(), grade: 'A', isScience: false
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -1274,17 +1296,17 @@ const CourseModal = ({ isOpen, onClose, onSuccess, course, isGuest }) => {
 
     useEffect(() => {
         if (course) {
-            setFormData(course);
+            setFormData({ ...course, isScience: course.isScience || false });
         } else {
-            setFormData({ name: '', code: '', credits: '', semester: 'Fall', year: new Date().getFullYear(), grade: 'A' });
+            setFormData({ name: '', code: '', credits: '', semester: 'Fall', year: new Date().getFullYear(), grade: 'A', isScience: false });
         }
     }, [course]);
     
     if (!isOpen) return null;
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     };
 
     const handleSubmit = async (e) => {
@@ -1301,6 +1323,7 @@ const CourseModal = ({ isOpen, onClose, onSuccess, course, isGuest }) => {
             credits: parseFloat(formData.credits),
             year: parseInt(formData.year, 10),
             userId: user.uid,
+            isScience: formData.isScience || false,
         };
 
         try {
@@ -1369,6 +1392,18 @@ const CourseModal = ({ isOpen, onClose, onSuccess, course, isGuest }) => {
                                 </select>
                             </div>
                         </div>
+                        <div className="pt-2">
+                            <label className="flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    name="isScience"
+                                    checked={formData.isScience}
+                                    onChange={handleChange}
+                                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                />
+                                <span className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">This is a science course (for BCPM GPA)</span>
+                            </label>
+                        </div>
                     </div>
 
                     <div className="mt-6 flex justify-end gap-4">
@@ -1384,4 +1419,3 @@ const CourseModal = ({ isOpen, onClose, onSuccess, course, isGuest }) => {
         </div>
     );
 };
-

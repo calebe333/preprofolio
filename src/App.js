@@ -183,7 +183,7 @@ function PreProFolioApp() {
     };
     
     // Apply different background for login screen
-    const backgroundClass = !user && !loading ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-900';
+    const backgroundClass = !user && !loading ? 'bg-gray-100 dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-900';
 
     return (
         <div className={`min-h-screen font-sans ${backgroundClass} text-gray-800 dark:text-gray-200 transition-colors duration-300`}>
@@ -245,10 +245,17 @@ const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) =
         ease: 'anticipate',
         duration: 0.5
     };
+    
+    const GuestBanner = () => (
+        <div className="bg-yellow-400/80 dark:bg-yellow-600/80 text-center py-2 px-4 text-sm text-black dark:text-white font-semibold backdrop-blur-sm">
+            You are in Guest Mode. Your data will not be saved.
+        </div>
+    );
 
     return (
         <>
             {user || isGuest ? <Header darkMode={darkMode} setDarkMode={toggleDarkMode} onSignOut={handleSignOut} showSignOut={!!user || isGuest} setCurrentPage={setCurrentPage} /> : null}
+            {isGuest && <GuestBanner />}
             <main>
                 {user || isGuest ? (
                     <div className="p-4 sm:p-6 lg:p-8">
@@ -329,95 +336,64 @@ const LoginScreen = ({ onGuestLogin }) => {
             console.error("Authentication error:", error);
         }
     };
-
-    const features = [
-        {
-            icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-            title: "Effortless Hour Logging",
-            description: "Quickly log single or recurring entries for all your pre-health activities, from patient care to research."
-        },
-        {
-            icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
-            title: "Visualize Your Progress",
-            description: "Set goals for each category and watch your progress with intuitive charts and dynamic progress bars."
-        },
-        {
-            icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
-            title: "Powerful Search & Filter",
-            description: "Instantly find any entry with advanced search and filtering by category, keyword, or date range."
-        }
-    ];
+    
+    const scrollTo = (id) => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    };
 
     return (
-        <div className="w-full bg-white dark:bg-gray-900">
-            <style>{`
-                .animated-gradient {
-                    background-size: 400%;
-                    -webkit-animation: animation 10s ease infinite;
-                    -moz-animation: animation 10s ease infinite;
-                    animation: animation 10s ease infinite;
-                }
+        <div className="w-full bg-gray-100 dark:bg-gray-900">
+            <header className="fixed top-0 left-0 right-0 z-50 bg-white/50 dark:bg-gray-900/50 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700">
+                <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+                    <div className="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                        <h1 className="text-xl font-bold">PreProFolio</h1>
+                    </div>
+                    <div className="hidden md:flex items-center gap-8">
+                        <button onClick={() => scrollTo('features')} className="font-semibold hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Features</button>
+                        <button onClick={() => scrollTo('about')} className="font-semibold hover:text-blue-600 dark:hover:text-blue-400 transition-colors">About</button>
+                    </div>
+                </nav>
+            </header>
 
-                @keyframes animation {
-                    0%, 100% { background-position: 0% 50%; }
-                    50% { background-position: 100% 50%; }
-                }
-            `}</style>
-            <div className="relative isolate px-6 pt-14 lg:px-8 bg-gradient-to-r from-blue-100 via-teal-100 to-violet-100 dark:from-blue-900/30 dark:via-teal-900/30 dark:to-violet-900/30 animated-gradient">
-                <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
-                    <div className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#80ff89] to-[#0077ff] opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" style={{clipPath: 'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)'}}></div>
-                </div>
-
-                <div className="mx-auto max-w-2xl py-32 sm:py-48 lg:py-56">
-                    <div className="text-center">
-                        <div className="flex justify-center items-center gap-4 mb-8">
-                             <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                            </svg>
-                            <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-6xl">PreProFolio</h1>
-                        </div>
-                        <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">The smart, secure, and simple way for pre-health students to track their experience hours and prepare for professional school.</p>
-                        <div className="mt-10 flex items-center justify-center gap-x-6">
-                           <button onClick={handleSignIn} className="flex items-center justify-center rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transform hover:scale-105 transition-transform duration-300">
-                                <svg className="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C42.012 35.836 44 30.138 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+            <main>
+                <section className="relative min-h-screen w-full flex items-center justify-center p-4 overflow-hidden">
+                     <div className="absolute inset-0">
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 opacity-80 dark:opacity-70"></div>
+                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                    </div>
+                    <div className="relative z-10 w-full max-w-md p-8 space-y-8 bg-white/30 dark:bg-gray-800/30 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 text-center">
+                        <h1 className="text-5xl font-extrabold text-white tracking-tight">Your Journey Starts Here.</h1>
+                        <p className="mt-2 text-lg text-gray-200">The smart, secure, and simple way to track your pre-health journey.</p>
+                        <div className="space-y-4 pt-4">
+                            <button onClick={handleSignIn} className="w-full flex items-center justify-center gap-3 py-3 px-4 text-lg font-semibold text-gray-700 bg-white rounded-xl shadow-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 transform hover:scale-105">
+                                <svg className="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C42.012 35.836 44 30.138 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
                                 Sign In with Google
                             </button>
-                            <button onClick={onGuestLogin} className="text-sm font-semibold leading-6 text-gray-900 dark:text-white">Try the Demo <span aria-hidden="true">→</span></button>
+                            <button onClick={onGuestLogin} className="w-full py-3 px-4 text-lg font-semibold text-white bg-white/20 rounded-xl shadow-md hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-white transition-all duration-300">
+                                Continue as Guest
+                            </button>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-900 py-24 sm:py-32">
-                <div className="mx-auto max-w-7xl px-6 lg:px-8">
-                    <div className="mx-auto max-w-2xl lg:text-center">
-                        <h2 className="text-base font-semibold leading-7 text-blue-600 dark:text-blue-400">Built for Your Journey</h2>
-                        <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">Everything you need to stay organized</p>
-                        <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">Stop wrestling with spreadsheets. PreProFolio is designed from the ground up to make tracking your hours simple, so you can focus on what matters most: gaining experience.</p>
+                </section>
+
+                <section id="features" className="py-20 bg-white dark:bg-gray-800">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                        <h2 className="text-3xl font-extrabold">Features</h2>
+                        <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">Everything you need, nothing you don't.</p>
+                        {/* Feature items... */}
                     </div>
-                    <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-4xl">
-                        <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-10 lg:max-w-none lg:grid-cols-2 lg:gap-y-16">
-                            {features.map((feature) => (
-                                <div key={feature.title} className="relative pl-16">
-                                    <dt className="text-base font-semibold leading-7 text-gray-900 dark:text-white">
-                                        <div className="absolute left-0 top-0 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20">
-                                            {feature.icon}
-                                        </div>
-                                        {feature.title}
-                                    </dt>
-                                    <dd className="mt-2 text-base leading-7 text-gray-600 dark:text-gray-300">{feature.description}</dd>
-                                </div>
-                            ))}
-                        </dl>
+                </section>
+
+                <section id="about" className="py-20 bg-gray-50 dark:bg-gray-900">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                        <h2 className="text-3xl font-extrabold">About PreProFolio</h2>
+                        <p className="mt-4 max-w-3xl mx-auto text-lg text-gray-600 dark:text-gray-400">
+                            PreProFolio was built by a pre-health student, for pre-health students. We know the struggle of juggling coursework, volunteering, and clinical hours. Our goal is to simplify the tracking process so you can focus on what truly matters: gaining valuable experience and preparing for your future career in healthcare.
+                        </p>
                     </div>
-                </div>
-            </div>
-             <footer className="bg-white dark:bg-gray-900">
-                <div className="mx-auto max-w-7xl px-6 py-12 md:flex md:items-center md:justify-between lg:px-8">
-                    <div className="mt-8 md:mt-0 md:order-1">
-                        <p className="text-center text-xs leading-5 text-gray-500">&copy; {new Date().getFullYear()} PreProFolio. All rights reserved.</p>
-                    </div>
-                </div>
-            </footer>
+                </section>
+            </main>
         </div>
     );
 };
@@ -461,23 +437,14 @@ const Dashboard = ({ isGuest, setCurrentPage }) => {
         
         const unsubscribes = [];
 
-        // Fetch Experiences
         const expQuery = query(collection(db, "experiences"), where("userId", "==", user.uid), orderBy("date", "desc"));
-        unsubscribes.push(onSnapshot(expQuery, (snap) => {
-            setExperiences(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        }));
+        unsubscribes.push(onSnapshot(expQuery, (snap) => setExperiences(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
 
-        // Fetch Courses
         const courseQuery = query(collection(db, "courses"), where("userId", "==", user.uid));
-         unsubscribes.push(onSnapshot(courseQuery, (snap) => {
-            setCourses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        }));
+        unsubscribes.push(onSnapshot(courseQuery, (snap) => setCourses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
 
-        // Fetch Goals
         const goalDocRef = doc(db, "goals", user.uid);
-        unsubscribes.push(onSnapshot(goalDocRef, (docSnap) => {
-            setGoals(docSnap.exists() ? docSnap.data() : {});
-        }));
+        unsubscribes.push(onSnapshot(goalDocRef, (docSnap) => setGoals(docSnap.exists() ? docSnap.data() : {})));
         
         setLoading(false);
 
@@ -485,79 +452,53 @@ const Dashboard = ({ isGuest, setCurrentPage }) => {
     }, [user, isGuest]);
     
     const motion = window.motion;
-
-    const containerVariants = {
-        hidden: { opacity: 1 },
-        visible: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.15
-            }
-        }
-    };
-
-    const itemVariants = {
-        hidden: { y: 20, opacity: 0 },
-        visible: {
-            y: 0,
-            opacity: 1,
-            transition: { type: 'spring', stiffness: 100 }
-        }
-    };
-
-    const displayName = isGuest ? "Guest" : user?.displayName;
+    const displayName = isGuest ? "Guest" : user?.displayName?.split(' ')[0];
+    const totalHours = experiences.reduce((acc, curr) => acc + (curr.hours || 0), 0);
+    const cumulativeGpa = calculateGPA(courses);
+    const scienceGpa = calculateGPA(courses, true);
 
     if (loading) return <LoadingScreen />;
 
+    const StatsCard = ({ icon, title, value, color }) => (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg flex items-center gap-4 transition-all hover:shadow-xl hover:scale-105">
+            <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${color}`}>
+                {icon}
+            </div>
+            <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{title}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
+            </div>
+        </div>
+    );
+
     return (
         <div className="max-w-7xl mx-auto space-y-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h2>
-                    <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome back, {displayName}!</p>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    <button onClick={() => setIsGoalModalOpen(true)} className="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 transform hover:scale-105 transition-transform">
-                        Set Goals
-                    </button>
-                    <button onClick={() => setCurrentPage('experiences')} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 transform hover:scale-105 transition-transform">
-                        Log Experience
-                    </button>
+            <div>
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome back, {displayName}!</h2>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">Here's a snapshot of your progress.</p>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatsCard icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} title="Total Hours" value={totalHours.toFixed(1)} color="bg-blue-500" />
+                <StatsCard icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>} title="Cumulative GPA" value={cumulativeGpa} color="bg-green-500" />
+                <StatsCard icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>} title="Science GPA" value={scienceGpa} color="bg-purple-500" />
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg flex flex-col justify-center items-center gap-4 transition-all hover:shadow-xl">
+                    <button onClick={() => setCurrentPage('experiences')} className="w-full text-center bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-semibold py-2 px-4 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900">Log Experience</button>
+                    <button onClick={() => setIsGoalModalOpen(true)} className="w-full text-center bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">Set Goals</button>
                 </div>
             </div>
             
-            {motion ? (
-                <motion.div 
-                    className="grid grid-cols-1 lg:grid-cols-3 gap-6"
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="visible"
-                >
-                    <motion.div className="lg:col-span-2 space-y-6" variants={itemVariants}>
-                        <GpaSummary courses={courses} />
-                        <RecentExperiences experiences={experiences} setCurrentPage={setCurrentPage} />
-                    </motion.div>
-                    <motion.div className="lg:col-span-1" variants={itemVariants}>
-                        <ProgressSummary experiences={experiences} goals={goals} />
-                    </motion.div>
-                    <motion.div className="lg:col-span-3" variants={itemVariants}>
-                        <MonthlyChart experiences={experiences} />
-                    </motion.div>
-                </motion.div>
-            ) : ( 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 space-y-6">
-                        <GpaSummary courses={courses} />
-                        <RecentExperiences experiences={experiences} setCurrentPage={setCurrentPage} />
-                    </div>
-                    <div className="lg:col-span-1">
-                        <ProgressSummary experiences={experiences} goals={goals} />
-                    </div>
-                     <div className="lg:col-span-3">
-                        <MonthlyChart experiences={experiences} />
-                    </div>
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div className="lg:col-span-3">
+                    <MonthlyChart experiences={experiences} />
                 </div>
-            )}
+                <div className="lg:col-span-2">
+                    <ProgressSummary experiences={experiences} goals={goals} />
+                </div>
+                <div className="lg:col-span-5">
+                    <RecentExperiences experiences={experiences} setCurrentPage={setCurrentPage} />
+                </div>
+            </div>
 
             {motion && <motion.AnimatePresence>
                 {isGoalModalOpen && (
@@ -579,31 +520,6 @@ const Dashboard = ({ isGuest, setCurrentPage }) => {
                     isGuest={isGuest}
                 />
             )}
-        </div>
-    );
-};
-
-const GpaSummary = ({ courses }) => {
-    const cumulativeGpa = calculateGPA(courses);
-    const scienceGpa = calculateGPA(courses, true);
-
-    return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                <span>Academic Summary</span>
-            </h3>
-            <div className="flex justify-around items-center text-center">
-                <div>
-                    <h4 className="text-md font-semibold text-gray-500 dark:text-gray-400">Cumulative GPA</h4>
-                    <p className="text-4xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">{cumulativeGpa}</p>
-                </div>
-                <div className="border-l border-gray-200 dark:border-gray-700 h-16"></div>
-                <div>
-                    <h4 className="text-md font-semibold text-gray-500 dark:text-gray-400">Science GPA</h4>
-                    <p className="text-4xl font-extrabold text-green-600 dark:text-green-400 mt-1">{scienceGpa}</p>
-                </div>
-            </div>
         </div>
     );
 };
@@ -637,7 +553,7 @@ const ProgressSummary = ({ experiences, goals }) => {
     const totalProgress = totalGoal > 0 ? Math.min((totalHours / totalGoal) * 100, 100) : 0;
 
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 h-full">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg h-full">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Hour Progress</h3>
             <div className="space-y-1 mb-4">
                 <div className="flex justify-between items-baseline mb-1">
@@ -666,9 +582,9 @@ const ProgressSummary = ({ experiences, goals }) => {
 };
 
 const RecentExperiences = ({ experiences, setCurrentPage }) => {
-    const recent = experiences.slice(0, 4);
+    const recent = experiences.slice(0, 5);
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">Recent Experiences</h3>
                 <button onClick={() => setCurrentPage('experiences')} className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">View All</button>
@@ -706,7 +622,7 @@ const MonthlyChart = ({ experiences }) => {
     const sortedBarData = Object.values(monthlyData).sort((a, b) => new Date(a.name) - new Date(b.name));
 
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg h-full">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Monthly Hour Distribution</h3>
             {sortedBarData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={350}>

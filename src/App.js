@@ -5,14 +5,14 @@ import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // --- Firebase Configuration ---
-// NOTE: Replace with your actual Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAKE-fU2KRs9flQEbBZdL4PZqKZT-irrKU",
   authDomain: "preprofolio.firebaseapp.com",
   projectId: "preprofolio",
   storageBucket: "preprofolio.appspot.com",
   messagingSenderId: "692987377324",
-  appId: "1:692987377324:web:5b2c3b5e7ce7ed5e4f5109"
+  appId: "1:692987377324:web:5b2c3b5e7ce7ed5e4f5109",
+  measurementId: "G-EE6Z37FY80"
 };
 
 // --- Initialize Firebase ---
@@ -57,7 +57,13 @@ const getMockData = () => ({
         { id: 'mock_course_1', name: 'General Chemistry I', code: 'CHEM 101', credits: 4, grade: 'A', semester: 'Fall', year: 2023, isScience: true },
         { id: 'mock_course_2', name: 'Introduction to Psychology', code: 'PSYC 101', credits: 3, grade: 'B+', semester: 'Fall', year: 2023, isScience: false },
         { id: 'mock_course_3', name: 'Organic Chemistry I', code: 'CHEM 231', credits: 4, grade: 'A-', semester: 'Spring', year: 2024, isScience: true },
-    ]
+    ],
+    plannedCourses: [
+        { id: 'planned_1', name: 'Physics I', code: 'PHYS 220' },
+    ],
+    coursePlan: {
+        'Fall-2024': [{ id: 'mock_course_3', name: 'Organic Chemistry I', code: 'CHEM 231' }]
+    }
 });
 
 // --- Authentication Context ---
@@ -1126,6 +1132,39 @@ const calculateGPA = (courses, scienceOnly = false) => {
 
 // --- Courses Page ---
 const CoursesPage = ({ isGuest }) => {
+    const [view, setView] = useState('log'); // 'log' or 'planner'
+
+    return (
+        <div className="max-w-7xl mx-auto space-y-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Course Tracker</h2>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">
+                        {view === 'log' ? 'Log your academic journey and track your GPA.' : 'Plan your future semesters with a drag-and-drop interface.'}
+                    </p>
+                </div>
+                <div className="bg-gray-200 dark:bg-gray-700 p-1 rounded-lg flex">
+                    <button 
+                        onClick={() => setView('log')}
+                        className={`px-4 py-1.5 text-sm font-semibold rounded-md ${view === 'log' ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow' : 'text-gray-600 dark:text-gray-300'}`}
+                    >
+                        Course Log
+                    </button>
+                    <button 
+                        onClick={() => setView('planner')}
+                        className={`px-4 py-1.5 text-sm font-semibold rounded-md ${view === 'planner' ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow' : 'text-gray-600 dark:text-gray-300'}`}
+                    >
+                        Course Planner
+                    </button>
+                </div>
+            </div>
+            {view === 'log' ? <CourseLog isGuest={isGuest} /> : <CoursePlanner isGuest={isGuest} />}
+        </div>
+    );
+};
+
+
+const CourseLog = ({ isGuest }) => {
     const { user } = useAuth();
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -1193,13 +1232,9 @@ const CoursesPage = ({ isGuest }) => {
     }, {});
 
     return (
-        <div className="max-w-7xl mx-auto space-y-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Course Tracker</h2>
-                    <p className="text-gray-600 dark:text-gray-400 mt-1">Log your academic journey and track your GPA.</p>
-                </div>
-                <button onClick={() => { setEditingCourse(null); setIsModalOpen(true); }} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
+        <div className="space-y-8">
+            <div className="flex justify-end">
+                 <button onClick={() => { setEditingCourse(null); setIsModalOpen(true); }} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
                     Add Course
                 </button>
             </div>
@@ -1258,6 +1293,303 @@ const CoursesPage = ({ isGuest }) => {
                 />
             )}
         </div>
+    );
+};
+
+const CoursePlanner = ({ isGuest }) => {
+    const { user } = useAuth();
+    const [takenCourses, setTakenCourses] = useState([]);
+    const [plannedCourses, setPlannedCourses] = useState([]);
+    const [plan, setPlan] = useState({});
+    const [loading, setLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [showAddCourseForm, setShowAddCourseForm] = useState(false);
+
+    // Auto-populate taken courses into the plan on initial load
+    useEffect(() => {
+        if (takenCourses.length > 0) {
+            const autoPlan = {};
+            takenCourses.forEach(course => {
+                const semesterId = `${course.semester}-${course.year}`;
+                if (!autoPlan[semesterId]) {
+                    autoPlan[semesterId] = [];
+                }
+                // Avoid adding duplicates if already in a user-saved plan
+                const isAlreadyInPlan = Object.values(plan).flat().some(p => p.id === course.id);
+                if (!isAlreadyInPlan) {
+                   autoPlan[semesterId].push(course);
+                }
+            });
+            // Merge with existing plan, giving user's manual placement priority
+            setPlan(prevPlan => {
+                const newPlan = {...autoPlan};
+                Object.keys(prevPlan).forEach(semId => {
+                    if (newPlan[semId]) {
+                        // Filter out duplicates, keeping the one from the user's saved plan
+                        const userPlannedIds = prevPlan[semId].map(c => c.id);
+                        newPlan[semId] = newPlan[semId].filter(c => !userPlannedIds.includes(c.id));
+                        newPlan[semId].push(...prevPlan[semId]);
+                    } else {
+                        newPlan[semId] = prevPlan[semId];
+                    }
+                });
+                return newPlan;
+            });
+        }
+    }, [takenCourses]); // Rerun only when taken courses are loaded
+
+    // Generate upcoming semesters for the planner
+    const generateSemesters = () => {
+        const semesters = [];
+        const currentYear = new Date().getFullYear();
+        for (let i = -2; i < 5; i++) { // Show past 2 years as well
+            const year = currentYear + i;
+            semesters.push({ id: `Fall-${year}`, name: `Fall ${year}` });
+            semesters.push({ id: `Spring-${year + 1}`, name: `Spring ${year + 1}` });
+            semesters.push({ id: `Summer-${year + 1}`, name: `Summer ${year + 1}` });
+        }
+        return semesters;
+    };
+    const upcomingSemesters = generateSemesters();
+
+    useEffect(() => {
+        if (isGuest) {
+            setTakenCourses(getMockData().courses || []);
+            setPlannedCourses(getMockData().plannedCourses || []);
+            setPlan(getMockData().coursePlan || {});
+            setLoading(false);
+            return;
+        }
+        if (!user || !db) {
+            setLoading(false);
+            return;
+        }
+
+        // Fetch all logged (taken) courses
+        const coursesQuery = query(collection(db, "courses"), where("userId", "==", user.uid));
+        const unsubscribeTaken = onSnapshot(coursesQuery, (snapshot) => {
+            setTakenCourses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: 'taken' })));
+            setLoading(false);
+        });
+
+        // Fetch all planned courses
+        const plannedQuery = query(collection(db, "plannedCourses"), where("userId", "==", user.uid));
+        const unsubscribePlanned = onSnapshot(plannedQuery, (snapshot) => {
+            setPlannedCourses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: 'planned' })));
+        });
+
+        // Fetch the saved course plan
+        const planDocRef = doc(db, 'coursePlans', user.uid);
+        const unsubscribePlan = onSnapshot(planDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setPlan(docSnap.data().plan || {});
+            }
+        });
+
+        return () => {
+            unsubscribeTaken();
+            unsubscribePlanned();
+            unsubscribePlan();
+        };
+    }, [user, isGuest]);
+
+    const handleDragStart = (e, course) => {
+        e.dataTransfer.setData('course', JSON.stringify(course));
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+    };
+
+    const handleDrop = (e, semesterId) => {
+        e.preventDefault();
+        const course = JSON.parse(e.dataTransfer.getData('course'));
+        
+        setPlan(prevPlan => {
+            const newPlan = { ...prevPlan };
+            Object.keys(newPlan).forEach(sem => {
+                newPlan[sem] = newPlan[sem].filter(c => c.id !== course.id);
+            });
+            const semesterCourses = newPlan[semesterId] || [];
+            if (!semesterCourses.some(c => c.id === course.id)) {
+                newPlan[semesterId] = [...semesterCourses, course];
+            }
+            return newPlan;
+        });
+    };
+    
+    const removeFromPlan = (courseId, semesterId) => {
+        setPlan(prevPlan => {
+            const newPlan = { ...prevPlan };
+            if (newPlan[semesterId]) {
+                newPlan[semesterId] = newPlan[semesterId].filter(c => c.id !== courseId);
+            }
+            return newPlan;
+        });
+    };
+
+    const handleSavePlan = async () => {
+        if (isGuest) {
+            alert("Saving is disabled in Guest Mode.");
+            return;
+        }
+        setIsSaving(true);
+        try {
+            const planDocRef = doc(db, 'coursePlans', user.uid);
+            await setDoc(planDocRef, { plan });
+            alert("Plan saved successfully!");
+        } catch (error) {
+            console.error("Error saving plan:", error);
+            alert("Failed to save plan.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    const allAvailableCourses = [...takenCourses, ...plannedCourses];
+    const unassignedCourses = allAvailableCourses.filter(course => 
+        !Object.values(plan).flat().some(plannedCourse => plannedCourse.id === course.id)
+    );
+
+    if (loading) return <p>Loading planner...</p>;
+
+    return (
+        <div className="flex flex-col lg:flex-row gap-6">
+            {/* Course Bank */}
+            <div className="lg:w-1/3 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md flex flex-col">
+                <h3 className="text-lg font-bold mb-4">Course Bank</h3>
+                <div className="space-y-2 flex-grow overflow-y-auto pr-2">
+                    {unassignedCourses.map(course => (
+                        <div 
+                            key={course.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, course)}
+                            className={`p-2 rounded-lg cursor-grab active:cursor-grabbing ${course.type === 'taken' ? 'bg-gray-100 dark:bg-gray-700' : 'bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-300 dark:border-yellow-700'}`}
+                        >
+                            <p className="font-semibold">{course.name}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{course.code}</p>
+                        </div>
+                    ))}
+                     {unassignedCourses.length === 0 && !showAddCourseForm && <p className="text-sm text-gray-500">All courses have been planned.</p>}
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    {showAddCourseForm ? (
+                        <AddPlannedCourseForm 
+                            userId={user?.uid} 
+                            isGuest={isGuest}
+                            onClose={() => setShowAddCourseForm(false)} 
+                        />
+                    ) : (
+                        <button 
+                            onClick={() => setShowAddCourseForm(true)}
+                            className="w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-semibold py-2 px-4 rounded-lg"
+                        >
+                            + Add Planned Course
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Planner Grid */}
+            <div className="lg:w-2/3">
+                 <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold">Your Course Plan</h3>
+                    <button 
+                        onClick={handleSavePlan}
+                        disabled={isSaving}
+                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md disabled:opacity-50"
+                    >
+                        {isSaving ? 'Saving...' : 'Save Plan'}
+                    </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {upcomingSemesters.map(semester => (
+                        <div 
+                            key={semester.id}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, semester.id)}
+                            className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md min-h-[150px] border-2 border-dashed border-gray-300 dark:border-gray-600"
+                        >
+                            <h4 className="font-bold border-b border-gray-200 dark:border-gray-700 pb-2 mb-2">{semester.name}</h4>
+                            <div className="space-y-2">
+                                {plan[semester.id] && plan[semester.id].map(course => (
+                                    <div key={course.id} className={`p-2 rounded-lg relative ${course.type === 'taken' ? 'bg-blue-100 dark:bg-blue-900/50' : 'bg-yellow-100 dark:bg-yellow-900/50'}`}>
+                                        <p className="font-semibold">{course.name}</p>
+                                        <p className="text-sm text-gray-600 dark:text-gray-300">{course.code}</p>
+                                        <button 
+                                            onClick={() => removeFromPlan(course.id, semester.id)}
+                                            className="absolute top-1 right-1 text-gray-400 hover:text-red-500"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const AddPlannedCourseForm = ({ userId, isGuest, onClose }) => {
+    const [name, setName] = useState('');
+    const [code, setCode] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!name) return;
+        if (isGuest) {
+            alert("Adding courses is disabled in Guest Mode.");
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            await addDoc(collection(db, 'plannedCourses'), {
+                name,
+                code,
+                userId,
+                createdAt: serverTimestamp(),
+            });
+            setName('');
+            setCode('');
+            onClose();
+        } catch (error) {
+            console.error("Error adding planned course:", error);
+            alert("Failed to add course.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-2">
+            <input 
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Course Name (e.g., Physics II)"
+                required
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+            />
+            <input 
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Course Code (e.g., PHYS 221)"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+            />
+            <div className="flex gap-2">
+                <button type="button" onClick={onClose} className="w-full py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500">
+                    Cancel
+                </button>
+                <button type="submit" disabled={isSubmitting} className="w-full py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                    {isSubmitting ? '...' : 'Add'}
+                </button>
+            </div>
+        </form>
     );
 };
 

@@ -70,6 +70,27 @@ const PROGRAM_PREREQUISITES = {
     }
 };
 
+// --- NEW: Application Timeline Data ---
+const TIMELINE_MILESTONES = {
+    'Pre-Med': [
+        { id: 'mcat_prep', title: 'Begin MCAT Preparation', description: 'Start a structured study plan for the MCAT.', category: 'Preparation' },
+        { id: 'primary_app', title: 'Submit Primary Application (AMCAS)', description: 'The AMCAS application typically opens in early May.', category: 'Primary Application' },
+        { id: 'secondary_app', title: 'Receive and Submit Secondary Applications', description: 'Secondaries are sent after your primary is verified. Aim for a two-week turnaround.', category: 'Secondary Application' },
+        { id: 'interviews', title: 'Interview Season', description: 'Interviews typically run from September through March.', category: 'Interviews' },
+    ],
+    'Pre-PA': [
+        { id: 'caspa_open', title: 'CASPA Application Opens', description: 'The Centralized Application Service for Physician Assistants usually opens in late April.', category: 'Primary Application' },
+        { id: 'gre_prep', title: 'Prepare for and Take the GRE', description: 'If required by your target schools, complete the GRE.', category: 'Preparation' },
+        { id: 'supplemental_apps', title: 'Complete Supplemental Applications', description: 'Many programs have their own secondary applications.', category: 'Secondary Application' },
+        { id: 'interviews', title: 'Interview Season', description: 'PA school interviews often occur in the fall and winter.', category: 'Interviews' },
+    ],
+    'Pre-Dental': [
+        { id: 'dat_prep', title: 'Prepare for and Take the DAT', description: 'The Dental Admission Test is a critical component of your application.', category: 'Preparation' },
+        { id: 'aadsas_open', title: 'AADSAS Application Opens', description: 'The Associated American Dental Schools Application Service typically opens in June.', category: 'Primary Application' },
+        { id: 'interviews', title: 'Interview Season', description: 'Dental school interviews often run from September to February.', category: 'Interviews' },
+    ]
+};
+
 
 // --- Mock Data for Guest Mode ---
 const getMockData = () => ({
@@ -225,6 +246,8 @@ const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) =
                 return <ExperiencesPage isGuest={isGuest} />;
             case 'courses':
                 return <CoursesPage isGuest={isGuest} />;
+            case 'timeline':
+                return <TimelinePage isGuest={isGuest} />;
             case 'export':
                 return <ExportPage isGuest={isGuest} />;
             case 'settings':
@@ -299,6 +322,9 @@ const Header = ({ darkMode, setDarkMode, onSignOut, showSignOut, setCurrentPage 
                         </button>
                         <button onClick={() => setCurrentPage('courses')} title="Courses" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none transform hover:scale-110 transition-transform">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                        </button>
+                        <button onClick={() => setCurrentPage('timeline')} title="Application Timeline" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none transform hover:scale-110 transition-transform">
+                           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                         </button>
                         <button onClick={() => setCurrentPage('export')} title="Export Report" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none transform hover:scale-110 transition-transform">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>

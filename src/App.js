@@ -45,6 +45,34 @@ const CATEGORIES = [
 ];
 const CATEGORY_NAMES = CATEGORIES.map(c => c.name);
 
+// --- NEW: Prerequisite Data ---
+const PROGRAM_PREREQUISITES = {
+    'Pre-Med': {
+        'General Chemistry': [{ name: 'General Chemistry I w/ Lab', keywords: ['general chemistry i', 'chem 1'] }, { name: 'General Chemistry II w/ Lab', keywords: ['general chemistry ii', 'chem 2'] }],
+        'Organic Chemistry': [{ name: 'Organic Chemistry I w/ Lab', keywords: ['organic chemistry i', 'ochem 1'] }, { name: 'Organic Chemistry II w/ Lab', keywords: ['organic chemistry ii', 'ochem 2'] }],
+        'Biochemistry': [{ name: 'Biochemistry', keywords: ['biochemistry', 'biochem'] }],
+        'Biology': [{ name: 'General Biology I w/ Lab', keywords: ['general biology i', 'bio 1'] }, { name: 'General Biology II w/ Lab', keywords: ['general biology ii', 'bio 2'] }],
+        'Physics': [{ name: 'Physics I w/ Lab', keywords: ['physics i'] }, { name: 'Physics II w/ Lab', keywords: ['physics ii'] }],
+        'Math': [{ name: 'Calculus I', keywords: ['calculus i', 'calc 1'] }, { name: 'Statistics', keywords: ['statistics', 'stats'] }],
+        'English': [{ name: 'English Composition', keywords: ['english composition', 'writing'] }],
+    },
+    'Pre-PA': {
+        'Anatomy & Physiology': [{ name: 'Anatomy & Physiology I w/ Lab', keywords: ['anatomy and physiology i', 'a&p 1'] }, { name: 'Anatomy & Physiology II w/ Lab', keywords: ['anatomy and physiology ii', 'a&p 2'] }],
+        'Chemistry': [{ name: 'General Chemistry I w/ Lab', keywords: ['general chemistry i', 'chem 1'] }, { name: 'Organic Chemistry I w/ Lab', keywords: ['organic chemistry i', 'ochem 1'] }],
+        'Biology': [{ name: 'General Biology I w/ Lab', keywords: ['general biology i', 'bio 1'] }, { name: 'Microbiology w/ Lab', keywords: ['microbiology', 'microbio'] }],
+        'Math': [{ name: 'Statistics', keywords: ['statistics', 'stats'] }],
+        'Psychology': [{ name: 'Introduction to Psychology', keywords: ['psychology'] }],
+        'Medical Terminology': [{ name: 'Medical Terminology', keywords: ['medical terminology'] }],
+    },
+    'Pre-Dental': {
+        'General Chemistry': [{ name: 'General Chemistry I w/ Lab', keywords: ['general chemistry i', 'chem 1'] }, { name: 'General Chemistry II w/ Lab', keywords: ['general chemistry ii', 'chem 2'] }],
+        'Organic Chemistry': [{ name: 'Organic Chemistry I w/ Lab', keywords: ['organic chemistry i', 'ochem 1'] }, { name: 'Organic Chemistry II w/ Lab', keywords: ['organic chemistry ii', 'ochem 2'] }],
+        'Biochemistry': [{ name: 'Biochemistry', keywords: ['biochemistry', 'biochem'] }],
+        'Biology': [{ name: 'General Biology I w/ Lab', keywords: ['general biology i', 'bio 1'] }, { name: 'General Biology II w/ Lab', keywords: ['general biology ii', 'bio 2'] }],
+        'Physics': [{ name: 'Physics I w/ Lab', keywords: ['physics i'] }],
+    }
+};
+
 
 // --- Mock Data for Guest Mode ---
 const getMockData = () => ({
@@ -1415,7 +1443,7 @@ const calculateGPA = (courses, scienceOnly = false) => {
 
 // --- Courses Page ---
 const CoursesPage = ({ isGuest }) => {
-    const [view, setView] = useState('log'); // 'log' or 'planner'
+    const [view, setView] = useState('log'); // 'log', 'planner', or 'prereqs'
 
     return (
         <div className="max-w-7xl mx-auto space-y-8">
@@ -1423,7 +1451,9 @@ const CoursesPage = ({ isGuest }) => {
                 <div>
                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Course Tracker</h2>
                     <p className="text-gray-600 dark:text-gray-400 mt-1">
-                        {view === 'log' ? 'Log your academic journey and track your GPA.' : 'Plan your future semesters with a drag-and-drop interface.'}
+                        {view === 'log' && 'Log your academic journey and track your GPA.'}
+                        {view === 'planner' && 'Plan your future semesters with a drag-and-drop interface.'}
+                        {view === 'prereqs' && 'Track your prerequisite completion for your chosen program.'}
                     </p>
                 </div>
                 <div className="bg-gray-200 dark:bg-gray-700 p-1 rounded-lg flex">
@@ -1439,9 +1469,17 @@ const CoursesPage = ({ isGuest }) => {
                     >
                         Course Planner
                     </button>
+                    <button 
+                        onClick={() => setView('prereqs')}
+                        className={`px-4 py-1.5 text-sm font-semibold rounded-md ${view === 'prereqs' ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow' : 'text-gray-600 dark:text-gray-300'}`}
+                    >
+                        Prerequisites
+                    </button>
                 </div>
             </div>
-            {view === 'log' ? <CourseLog isGuest={isGuest} /> : <CoursePlanner isGuest={isGuest} />}
+            {view === 'log' && <CourseLog isGuest={isGuest} />}
+            {view === 'planner' && <CoursePlanner isGuest={isGuest} />}
+            {view === 'prereqs' && <PrerequisiteTracker isGuest={isGuest} />}
         </div>
     );
 };
@@ -1590,6 +1628,151 @@ const CourseLog = ({ isGuest }) => {
         </div>
     );
 };
+
+// --- NEW: Prerequisite Tracker Component ---
+const PrerequisiteTracker = ({ isGuest }) => {
+    const { user } = useAuth();
+    const [profile, setProfile] = useState(null);
+    const [courses, setCourses] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (isGuest) {
+            const mock = getMockData();
+            setProfile(mock.profile);
+            setCourses(mock.courses);
+            setLoading(false);
+            return;
+        }
+
+        if (!user) {
+            setLoading(false);
+            return;
+        }
+
+        setLoading(true);
+        const unsubscribes = [];
+
+        // Fetch Profile
+        const profileDocRef = doc(db, 'profiles', user.uid);
+        unsubscribes.push(onSnapshot(profileDocRef, (docSnap) => {
+            setProfile(docSnap.exists() ? docSnap.data() : { track: 'Pre-Med' }); // Default to Pre-Med
+        }));
+
+        // Fetch Courses
+        const q = query(collection(db, "courses"), where("userId", "==", user.uid));
+        unsubscribes.push(onSnapshot(q, (querySnapshot) => {
+            setCourses(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }));
+        
+        setLoading(false);
+
+        return () => unsubscribes.forEach(unsub => unsub());
+    }, [user, isGuest]);
+
+    const findMatchingCourse = (prereq, takenCourses) => {
+        const takenCoursesCopy = [...takenCourses];
+        const match = takenCoursesCopy.find(takenCourse => {
+            const courseIdentifier = `${takenCourse.name.toLowerCase()} ${takenCourse.code.toLowerCase()}`;
+            return prereq.keywords.some(keyword => courseIdentifier.includes(keyword));
+        });
+        return match;
+    };
+
+    if (loading) return <LoadingScreen />;
+
+    const userTrack = profile?.track || 'Pre-Med';
+    const requirements = PROGRAM_PREREQUISITES[userTrack];
+
+    if (!requirements) {
+        return (
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg text-center">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Prerequisite Tracker</h3>
+                <p className="mt-4 text-gray-600 dark:text-gray-400">
+                    Prerequisite tracking is not yet available for the '{userTrack}' track.
+                    You can set your track in Settings.
+                </p>
+            </div>
+        );
+    }
+    
+    let completedCount = 0;
+    let totalCount = 0;
+    
+    // To avoid double-counting a course for multiple requirements
+    let usedCourseIds = new Set();
+
+    const requirementStatus = Object.entries(requirements).map(([category, prereqs]) => {
+        const processedPrereqs = prereqs.map(prereq => {
+            totalCount++;
+            const availableCourses = courses.filter(c => !usedCourseIds.has(c.id));
+            const matchingCourse = findMatchingCourse(prereq, availableCourses);
+            if (matchingCourse) {
+                usedCourseIds.add(matchingCourse.id);
+                completedCount++;
+            }
+            return { ...prereq, completedBy: matchingCourse };
+        });
+        return { category, prereqs: processedPrereqs };
+    });
+
+    const completionPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+    return (
+        <div className="space-y-8">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <div>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                            Prerequisites for <span className="text-blue-600 dark:text-blue-400">{userTrack}</span>
+                        </h3>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">Based on your profile settings.</p>
+                    </div>
+                    <div className="w-full sm:w-auto text-right">
+                        <p className="font-bold text-lg">{completedCount} / {totalCount} Completed</p>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-1">
+                            <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${completionPercentage}%` }}></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {requirementStatus.map(({ category, prereqs }) => (
+                    <div key={category} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                        <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">{category}</h4>
+                        <ul className="space-y-3">
+                            {prereqs.map(prereq => (
+                                <li key={prereq.name} className="flex items-start">
+                                    <div className="flex-shrink-0 mt-1">
+                                        {prereq.completedBy ? (
+                                             <svg className="h-5 w-5 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                            </svg>
+                                        ) : (
+                                            <svg className="h-5 w-5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                                            </svg>
+                                        )}
+                                    </div>
+                                    <div className="ml-3">
+                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-200">{prereq.name}</p>
+                                        {prereq.completedBy ? (
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">Completed with: {prereq.completedBy.name} ({prereq.completedBy.grade})</p>
+                                        ) : (
+                                            <p className="text-xs text-gray-400 dark:text-gray-500">Pending</p>
+                                        )}
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 
 const CoursePlanner = ({ isGuest }) => {
     const { user } = useAuth();

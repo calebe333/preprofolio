@@ -7,12 +7,13 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 // --- Firebase Configuration ---
 // NOTE: Replace with your actual Firebase configuration
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAKE-fU2KRs9flQEbBZdL4PZqKZT-irrKU",
+  authDomain: "preprofolio.firebaseapp.com",
+  projectId: "preprofolio",
+  storageBucket: "preprofolio.appspot.com",
+  messagingSenderId: "692987377324",
+  appId: "1:692987377324:web:5b2c3b5e7ce7ed5e4f5109"
+  measurementId: "G-EE6Z37FY80"
 };
 
 // --- Initialize Firebase ---

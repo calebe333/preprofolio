@@ -1,8 +1,14 @@
 import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'firebase/auth';
-import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc, onSnapshot, orderBy, writeBatch } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc, onSnapshot, orderBy, writeBatch, limit } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+// --- External Libraries for Export ---
+// We will load these dynamically in the main component
+// jsPDF for PDF generation
+// jsPDF-AutoTable for creating tables in PDFs
+// PapaParse for CSV generation
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -42,8 +48,9 @@ const CATEGORY_NAMES = CATEGORIES.map(c => c.name);
 // --- Mock Data for Guest Mode ---
 const getMockData = () => ({
     experiences: [
-        { id: 'mock1', category: 'Patient Care Experience', date: { toDate: () => new Date('2024-05-15') }, hours: 40, location: 'Community Hospital ER', notes: 'Assisted with patient vitals and transport.', isMeaningful: true },
+        { id: 'mock1', category: 'Patient Care Experience', date: { toDate: () => new Date('2024-07-15') }, hours: 40, location: 'Community Hospital ER', notes: 'Assisted with patient vitals and transport.', isMeaningful: true },
         { id: 'mock2', category: 'Volunteer Work', date: { toDate: () => new Date('2024-06-20') }, hours: 25, location: 'Local Soup Kitchen', notes: 'Served meals and helped with cleanup.', isMeaningful: false },
+        { id: 'mock3', category: 'Research', date: { toDate: () => new Date('2024-05-01') }, hours: 50, location: 'University Lab', notes: 'Conducted data analysis for a study on neuroplasticity.', isMeaningful: true },
     ],
     goals: {
         'Patient Care Experience': 200,
@@ -63,6 +70,11 @@ const getMockData = () => ({
     ],
     coursePlan: {
         'Fall-2024': [{ id: 'mock_course_3', name: 'Organic Chemistry I', code: 'CHEM 231' }]
+    },
+    profile: {
+        track: 'Pre-Med',
+        applicationYear: new Date().getFullYear() + 1,
+        bio: 'Aspiring physician with a passion for emergency medicine.'
     }
 });
 
@@ -111,6 +123,22 @@ function PreProFolioApp() {
     const { user, loading } = useAuth();
     const [currentPage, setCurrentPage] = useState('dashboard');
 
+    // Dynamically load external scripts for exporting
+    useEffect(() => {
+        const scripts = [
+            'https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js',
+            'https://unpkg.com/jspdf-autotable@3.5.23/dist/jspdf.plugin.autotable.js',
+            'https://unpkg.com/papaparse@5.3.2/papaparse.min.js'
+        ];
+        
+        scripts.forEach(src => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+            document.body.appendChild(script);
+        });
+    }, []);
+
     useEffect(() => {
         const isDark = localStorage.getItem('darkMode') === 'true';
         setDarkMode(isDark);
@@ -152,9 +180,11 @@ const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) =
     const handleSignOut = async () => {
         if (isGuest) {
             setIsGuest(false);
+            setCurrentPage('dashboard');
         } else if (auth) {
             try {
                 await signOut(auth);
+                setCurrentPage('dashboard');
             } catch (error) {
                 console.error("Error signing out:", error);
             }
@@ -168,13 +198,17 @@ const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) =
     const renderPage = () => {
         switch (currentPage) {
             case 'dashboard':
-                return <Dashboard isGuest={isGuest} />;
+                return <Dashboard isGuest={isGuest} setCurrentPage={setCurrentPage} />;
+            case 'experiences':
+                return <ExperiencesPage isGuest={isGuest} />;
             case 'courses':
                 return <CoursesPage isGuest={isGuest} />;
+            case 'export':
+                return <ExportPage isGuest={isGuest} />;
             case 'settings':
                 return <SettingsPage setCurrentPage={setCurrentPage} />;
             default:
-                return <Dashboard isGuest={isGuest} />;
+                return <Dashboard isGuest={isGuest} setCurrentPage={setCurrentPage}/>;
         }
     }
 
@@ -205,14 +239,20 @@ const Header = ({ darkMode, setDarkMode, onSignOut, showSignOut, setCurrentPage 
                         </svg>
                         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">PreProFolio</h1>
                     </button>
-                    <div className="flex items-center space-x-2">
-                        <button onClick={() => setCurrentPage('courses')} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
+                    <div className="flex items-center space-x-1 sm:space-x-2">
+                        <button onClick={() => setCurrentPage('experiences')} title="Experiences" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                        </button>
+                        <button onClick={() => setCurrentPage('courses')} title="Courses" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                         </button>
-                        <button onClick={() => setCurrentPage('settings')} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
+                        <button onClick={() => setCurrentPage('export')} title="Export Report" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                        </button>
+                        <button onClick={() => setCurrentPage('settings')} title="Settings" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         </button>
-                        <button onClick={setDarkMode} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
+                        <button onClick={setDarkMode} title="Toggle Dark Mode" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
                             {darkMode ? 
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg> : 
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
@@ -346,29 +386,246 @@ const LoadingScreen = () => (
             <div className="w-4 h-4 rounded-full bg-blue-500 animate-pulse"></div>
             <div className="w-4 h-4 rounded-full bg-blue-500 animate-pulse [animation-delay:0.2s]"></div>
             <div className="w-4 h-4 rounded-full bg-blue-500 animate-pulse [animation-delay:0.4s]"></div>
-            <p className="text-lg font-semibold">Loading your dashboard...</p>
+            <p className="text-lg font-semibold">Loading...</p>
         </div>
     </div>
 );
 
 
 // --- Dashboard Components ---
-const Dashboard = ({ isGuest }) => {
+const Dashboard = ({ isGuest, setCurrentPage }) => {
     const { user } = useAuth();
     const [experiences, setExperiences] = useState([]);
+    const [courses, setCourses] = useState([]);
     const [goals, setGoals] = useState({});
     const [loading, setLoading] = useState(true);
-    const [isExperienceModalOpen, setIsExperienceModalOpen] = useState(false);
     const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+    
+    useEffect(() => {
+        if (isGuest) {
+            const mock = getMockData();
+            setExperiences(mock.experiences);
+            setCourses(mock.courses);
+            setGoals(mock.goals);
+            setLoading(false);
+            return;
+        }
+        if (!user || !db) {
+            setLoading(false);
+            return;
+        };
+
+        setLoading(true);
+        
+        const unsubscribes = [];
+
+        // Fetch Experiences
+        const expQuery = query(collection(db, "experiences"), where("userId", "==", user.uid), orderBy("date", "desc"));
+        unsubscribes.push(onSnapshot(expQuery, (snap) => {
+            setExperiences(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }));
+
+        // Fetch Courses
+        const courseQuery = query(collection(db, "courses"), where("userId", "==", user.uid));
+         unsubscribes.push(onSnapshot(courseQuery, (snap) => {
+            setCourses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }));
+
+        // Fetch Goals
+        const goalDocRef = doc(db, "goals", user.uid);
+        unsubscribes.push(onSnapshot(goalDocRef, (docSnap) => {
+            setGoals(docSnap.exists() ? docSnap.data() : {});
+        }));
+        
+        setLoading(false);
+
+        return () => unsubscribes.forEach(unsub => unsub());
+    }, [user, isGuest]);
+
+    const displayName = isGuest ? "Guest" : user?.displayName;
+
+    if (loading) return <LoadingScreen />;
+
+    return (
+        <div className="max-w-7xl mx-auto space-y-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h2>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome back, {displayName}!</p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <button onClick={() => setIsGoalModalOpen(true)} className="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
+                        Set Goals
+                    </button>
+                    <button onClick={() => setCurrentPage('experiences')} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
+                        Log Experience
+                    </button>
+                </div>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-6">
+                    <GpaSummary courses={courses} />
+                    <RecentExperiences experiences={experiences} setCurrentPage={setCurrentPage} />
+                </div>
+                <div className="lg:col-span-1">
+                    <ProgressSummary experiences={experiences} goals={goals} />
+                </div>
+            </div>
+            
+            <MonthlyChart experiences={experiences} />
+
+            {isGoalModalOpen && (
+                <GoalModal
+                    isOpen={isGoalModalOpen}
+                    onClose={() => setIsGoalModalOpen(false)}
+                    onSuccess={() => setIsGoalModalOpen(false)}
+                    currentGoals={goals}
+                    isGuest={isGuest}
+                />
+            )}
+        </div>
+    );
+};
+
+const GpaSummary = ({ courses }) => {
+    const cumulativeGpa = calculateGPA(courses);
+    const scienceGpa = calculateGPA(courses, true);
+
+    return (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Academic Summary</h3>
+            <div className="flex justify-around items-center text-center">
+                <div>
+                    <h4 className="text-md font-semibold text-gray-500 dark:text-gray-400">Cumulative GPA</h4>
+                    <p className="text-4xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">{cumulativeGpa}</p>
+                </div>
+                <div className="border-l border-gray-200 dark:border-gray-700 h-16"></div>
+                <div>
+                    <h4 className="text-md font-semibold text-gray-500 dark:text-gray-400">Science GPA</h4>
+                    <p className="text-4xl font-extrabold text-green-600 dark:text-green-400 mt-1">{scienceGpa}</p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const ProgressSummary = ({ experiences, goals }) => {
+    const summary = CATEGORIES.map(cat => {
+        const current = experiences.filter(e => e.category === cat.name).reduce((acc, curr) => acc + (curr.hours || 0), 0);
+        const goal = goals[cat.name] || 0;
+        const progress = goal > 0 ? Math.min((current / goal) * 100, 100) : 0;
+        return { name: cat.name, current, goal, progress, color: cat.color };
+    });
+
+    const totalHours = experiences.reduce((acc, curr) => acc + (curr.hours || 0), 0);
+    const totalGoal = Object.values(goals).reduce((acc, curr) => acc + (parseInt(curr, 10) || 0), 0);
+    const totalProgress = totalGoal > 0 ? Math.min((totalHours / totalGoal) * 100, 100) : 0;
+
+    return (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md h-full">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Hour Progress</h3>
+            <div className="space-y-1 mb-4">
+                <div className="flex justify-between items-baseline mb-1">
+                    <span className="font-bold text-md text-gray-800 dark:text-gray-200">Total Hours</span>
+                    <span className="text-xl font-extrabold text-blue-600 dark:text-blue-400">{totalHours.toFixed(1)} / {totalGoal}</span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                    <div className="bg-blue-600 h-3 rounded-full" style={{ width: `${totalProgress}%` }}></div>
+                </div>
+            </div>
+            <div className="space-y-3">
+                {summary.filter(s => s.goal > 0).map((item) => (
+                    <div key={item.name}>
+                        <div className="flex justify-between text-sm font-medium mb-1">
+                            <span className="text-gray-700 dark:text-gray-300">{item.name}</span>
+                            <span className="text-gray-500 dark:text-gray-400">{item.current.toFixed(1)} / {item.goal} hrs</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div className="h-2 rounded-full" style={{ width: `${item.progress}%`, backgroundColor: item.color }}></div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const RecentExperiences = ({ experiences, setCurrentPage }) => {
+    const recent = experiences.slice(0, 4);
+    return (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Recent Experiences</h3>
+                <button onClick={() => setCurrentPage('experiences')} className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">View All</button>
+            </div>
+            <div className="space-y-3">
+                {recent.length > 0 ? recent.map(exp => (
+                    <div key={exp.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                        <div>
+                            <p className="font-semibold text-gray-800 dark:text-gray-200">{exp.location}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{exp.category}</p>
+                        </div>
+                        <div className="text-right">
+                             <p className="font-bold text-gray-800 dark:text-gray-200">{exp.hours.toFixed(1)} hrs</p>
+                             <p className="text-sm text-gray-500 dark:text-gray-400">{exp.date?.toDate().toLocaleDateString()}</p>
+                        </div>
+                    </div>
+                )) : <p className="text-center text-gray-500 dark:text-gray-400 pt-8">No experiences logged yet.</p>}
+            </div>
+        </div>
+    );
+};
+
+const MonthlyChart = ({ experiences }) => {
+    const monthlyData = experiences.reduce((acc, exp) => {
+        if (!exp.date || !exp.date.toDate) return acc;
+        const month = exp.date.toDate().toLocaleString('default', { month: 'short', year: '2-digit' });
+        if (!acc[month]) {
+            acc[month] = { name: month };
+            CATEGORIES.forEach(cat => acc[month][cat.name] = 0);
+        }
+        acc[month][exp.category] = (acc[month][exp.category] || 0) + exp.hours;
+        return acc;
+    }, {});
+
+    const sortedBarData = Object.values(monthlyData).sort((a, b) => new Date(a.name) - new Date(b.name));
+
+    return (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Monthly Hour Distribution</h3>
+            {sortedBarData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={350}>
+                    <BarChart data={sortedBarData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip formatter={(value) => `${value.toFixed(1)} hrs`} />
+                        <Legend />
+                        {CATEGORIES.map(cat => (
+                            <Bar key={cat.name} dataKey={cat.name} stackId="a" fill={cat.color} />
+                        ))}
+                    </BarChart>
+                </ResponsiveContainer>
+            ) : <p className="text-center text-gray-500 dark:text-gray-400 pt-16">Log hours to see your monthly progress chart.</p>}
+        </div>
+    );
+}
+
+// --- NEW EXPERIENCES PAGE ---
+const ExperiencesPage = ({ isGuest }) => {
+    const { user } = useAuth();
+    const [experiences, setExperiences] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [isExperienceModalOpen, setIsExperienceModalOpen] = useState(false);
     const [editingExperience, setEditingExperience] = useState(null);
     const [filterCategory, setFilterCategory] = useState('All');
     const [searchTerm, setSearchTerm] = useState('');
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
-    
+
     useEffect(() => {
         if (isGuest) {
             setExperiences(getMockData().experiences);
-            setGoals(getMockData().goals);
             setLoading(false);
             return;
         }
@@ -380,31 +637,17 @@ const Dashboard = ({ isGuest }) => {
         setLoading(true);
 
         const expQuery = query(collection(db, "experiences"), where("userId", "==", user.uid), orderBy("date", "desc"));
-        const unsubscribeExperiences = onSnapshot(expQuery, (querySnapshot) => {
+        const unsubscribe = onSnapshot(expQuery, (querySnapshot) => {
             const experiencesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setExperiences(experiencesData);
             setLoading(false);
         }, (error) => {
-            console.error("Error fetching experiences in real-time:", error);
-            alert("Could not fetch experiences. Check the developer console for errors (F12). It's likely a missing Firestore index.");
+            console.error("Error fetching experiences:", error);
+            alert("Could not fetch experiences. Check Firestore indexes.");
             setLoading(false);
         });
 
-        const goalDocRef = doc(db, "goals", user.uid);
-        const unsubscribeGoals = onSnapshot(goalDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                setGoals(docSnap.data());
-            } else {
-                setGoals({});
-            }
-        }, (error) => {
-            console.error("Error fetching goals in real-time:", error);
-        });
-
-        return () => {
-            unsubscribeExperiences();
-            unsubscribeGoals();
-        };
+        return () => unsubscribe();
     }, [user, isGuest]);
 
     const handleAddOrUpdate = () => {
@@ -423,7 +666,7 @@ const Dashboard = ({ isGuest }) => {
             return;
         }
 
-        if (window.confirm("Are you sure you want to delete this entry? This action cannot be undone.")) {
+        if (window.confirm("Are you sure you want to delete this entry?")) {
             try {
                 await deleteDoc(doc(db, "experiences", id));
             } catch (error) {
@@ -431,10 +674,6 @@ const Dashboard = ({ isGuest }) => {
             }
         }
     };
-
-    const handleGoalsSaved = () => {
-        setIsGoalModalOpen(false);
-    }
     
     const filteredExperiences = experiences.filter(exp => {
         const categoryMatch = filterCategory === 'All' || exp.category === filterCategory;
@@ -459,26 +698,18 @@ const Dashboard = ({ isGuest }) => {
         return categoryMatch && searchTermMatch && startDateMatch && endDateMatch;
     });
 
-    const displayName = isGuest ? "Guest" : user?.displayName;
-
     return (
         <div className="max-w-7xl mx-auto space-y-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Your Dashboard</h2>
-                    <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome back, {displayName}!</p>
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Experience Log</h2>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">Manage all your logged activities in one place.</p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    <button onClick={() => setIsGoalModalOpen(true)} className="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
-                        Set Goals
-                    </button>
-                    <button onClick={() => { setEditingExperience(null); setIsExperienceModalOpen(true); }} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
-                        Log Experience
-                    </button>
-                </div>
+                <button onClick={() => { setEditingExperience(null); setIsExperienceModalOpen(true); }} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2">
+                    Log New Experience
+                </button>
             </div>
             
-            <AnalyticsSummary experiences={experiences} goals={goals} />
             <ExperienceLog 
                 allExperiences={filteredExperiences} 
                 loading={loading}
@@ -501,92 +732,10 @@ const Dashboard = ({ isGuest }) => {
                     isGuest={isGuest}
                 />
             )}
-            {isGoalModalOpen && (
-                <GoalModal
-                    isOpen={isGoalModalOpen}
-                    onClose={() => setIsGoalModalOpen(false)}
-                    onSuccess={handleGoalsSaved}
-                    currentGoals={goals}
-                    isGuest={isGuest}
-                />
-            )}
         </div>
     );
 };
 
-const AnalyticsSummary = ({ experiences, goals }) => {
-    const summary = CATEGORIES.map(cat => {
-        const current = experiences.filter(e => e.category === cat.name).reduce((acc, curr) => acc + (curr.hours || 0), 0);
-        const goal = goals[cat.name] || 0;
-        const progress = goal > 0 ? Math.min((current / goal) * 100, 100) : 0;
-        return { name: cat.name, current, goal, progress, color: cat.color };
-    });
-
-    const totalHours = experiences.reduce((acc, curr) => acc + (curr.hours || 0), 0);
-    const totalGoal = Object.values(goals).reduce((acc, curr) => acc + (parseInt(curr, 10) || 0), 0);
-    const totalProgress = totalGoal > 0 ? Math.min((totalHours / totalGoal) * 100, 100) : 0;
-
-    const monthlyData = experiences.reduce((acc, exp) => {
-        if (!exp.date || !exp.date.toDate) return acc;
-        const month = exp.date.toDate().toLocaleString('default', { month: 'short', year: '2-digit' });
-        if (!acc[month]) {
-            acc[month] = { name: month };
-            CATEGORIES.forEach(cat => acc[month][cat.name] = 0);
-        }
-        acc[month][exp.category] = (acc[month][exp.category] || 0) + exp.hours;
-        return acc;
-    }, {});
-
-    const sortedBarData = Object.values(monthlyData).sort((a, b) => new Date(a.name) - new Date(b.name));
-
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md space-y-4">
-                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">Overall Progress</h3>
-                 <div className="space-y-1">
-                    <div className="flex justify-between items-baseline mb-1">
-                        <span className="font-bold text-lg text-gray-800 dark:text-gray-200">Total Hours</span>
-                        <span className="text-2xl font-extrabold text-blue-600 dark:text-blue-400">{totalHours.toFixed(1)} / {totalGoal}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
-                        <div className="bg-blue-600 h-4 rounded-full" style={{ width: `${totalProgress}%` }}></div>
-                    </div>
-                </div>
-                <div className="pt-4 space-y-3">
-                    {summary.filter(s => s.goal > 0).map((item) => (
-                        <div key={item.name}>
-                            <div className="flex justify-between text-sm font-medium mb-1">
-                                <span className="text-gray-700 dark:text-gray-300">{item.name}</span>
-                                <span className="text-gray-500 dark:text-gray-400">{item.current.toFixed(1)} / {item.goal} hrs</span>
-                            </div>
-                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                                <div className="h-2.5 rounded-full" style={{ width: `${item.progress}%`, backgroundColor: item.color }}></div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Monthly Progress</h3>
-                {sortedBarData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={350}>
-                        <BarChart data={sortedBarData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
-                            <XAxis dataKey="name" />
-                            <YAxis />
-                            <Tooltip formatter={(value) => `${value.toFixed(1)} hrs`} />
-                            <Legend />
-                            {CATEGORIES.map(cat => (
-                                <Bar key={cat.name} dataKey={cat.name} stackId="a" fill={cat.color} />
-                            ))}
-                        </BarChart>
-                    </ResponsiveContainer>
-                ) : <p className="text-center text-gray-500 dark:text-gray-400 pt-16">Log hours to see your progress.</p>}
-            </div>
-        </div>
-    );
-};
 
 const ExperienceLog = ({ allExperiences, loading, onEdit, onDelete, filterCategory, setFilterCategory, searchTerm, setSearchTerm, dateRange, setDateRange }) => {
     const [currentPage, setCurrentPage] = useState(1);
@@ -612,7 +761,7 @@ const ExperienceLog = ({ allExperiences, loading, onEdit, onDelete, filterCatego
     return (
         <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-md">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Experience Log</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">All Experiences</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full lg:w-auto">
                     <input 
                         type="text"
@@ -1747,6 +1896,246 @@ const CourseModal = ({ isOpen, onClose, onSuccess, course, isGuest }) => {
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    );
+};
+
+// --- EXPORT PAGE COMPONENT ---
+const ExportPage = ({ isGuest }) => {
+    const { user } = useAuth();
+    const [loading, setLoading] = useState(true);
+    const [profile, setProfile] = useState({});
+    const [experiences, setExperiences] = useState([]);
+    const [courses, setCourses] = useState([]);
+
+    useEffect(() => {
+        if (isGuest) {
+            const mock = getMockData();
+            setProfile(mock.profile);
+            setExperiences(mock.experiences);
+            setCourses(mock.courses);
+            setLoading(false);
+            return;
+        }
+
+        if (!user) {
+            setLoading(false);
+            return;
+        }
+
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                // Fetch Profile
+                const profileDocRef = doc(db, 'profiles', user.uid);
+                const profileSnap = await getDoc(profileDocRef);
+                if (profileSnap.exists()) {
+                    setProfile(profileSnap.data());
+                }
+
+                // Fetch Experiences
+                const expQuery = query(collection(db, "experiences"), where("userId", "==", user.uid), orderBy("date", "desc"));
+                const expSnap = await getDocs(expQuery);
+                setExperiences(expSnap.docs.map(d => ({...d.data(), id: d.id})));
+
+                // Fetch Courses
+                const courseQuery = query(collection(db, "courses"), where("userId", "==", user.uid), orderBy("year", "desc"), orderBy("semester", "desc"));
+                const courseSnap = await getDocs(courseQuery);
+                setCourses(courseSnap.docs.map(d => ({...d.data(), id: d.id})));
+
+            } catch (error) {
+                console.error("Error fetching data for export:", error);
+                alert("Could not fetch all data for the report. Please try again.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [user, isGuest]);
+
+    const handleExportPDF = () => {
+        if (typeof window.jspdf === 'undefined') {
+            alert('PDF library is not loaded yet. Please wait a moment and try again.');
+            return;
+        }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // --- Document Header ---
+        doc.setFontSize(22);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Pre-Professional Report Card', 105, 20, { align: 'center' });
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Report generated on: ${new Date().toLocaleDateString()}`, 105, 28, { align: 'center' });
+
+        // --- Profile Section ---
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Applicant Profile', 14, 45);
+        doc.setLineWidth(0.5);
+        doc.line(14, 47, 196, 47);
+
+        const profileName = isGuest ? "Guest User" : user?.displayName || 'N/A';
+        const profileEmail = isGuest ? "guest@example.com" : user?.email || 'N/A';
+        const profileTrack = profile.track === 'Other' ? profile.customTrack : profile.track;
+
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Name: ${profileName}`, 16, 55);
+        doc.text(`Email: ${profileEmail}`, 16, 61);
+        doc.text(`Track: ${profileTrack || 'N/A'}`, 105, 55);
+        doc.text(`Application Year: ${profile.applicationYear || 'N/A'}`, 105, 61);
+
+        // --- Summary Section ---
+        const totalHours = experiences.reduce((sum, exp) => sum + (exp.hours || 0), 0);
+        const cumulativeGpa = calculateGPA(courses);
+        const scienceGpa = calculateGPA(courses, true);
+
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Academic & Experience Summary', 14, 75);
+        doc.line(14, 77, 196, 77);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Cumulative GPA: ${cumulativeGpa}`, 16, 85);
+        doc.text(`Science (BCPM) GPA: ${scienceGpa}`, 105, 85);
+        doc.text(`Total Experience Hours: ${totalHours.toFixed(1)}`, 16, 91);
+
+        // --- Experience Log Table ---
+        const expBody = experiences.map(exp => [
+            exp.date?.toDate ? exp.date.toDate().toLocaleDateString() : 'N/A',
+            exp.category,
+            exp.location,
+            exp.hours.toFixed(1),
+            exp.notes || ''
+        ]);
+        doc.autoTable({
+            head: [['Date', 'Category', 'Location/Org', 'Hours', 'Notes']],
+            body: expBody,
+            startY: 100,
+            headStyles: { fillColor: [22, 160, 133] },
+            didDrawPage: (data) => {
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Experience Log', 14, data.cursor.y - 10);
+            }
+        });
+        
+        // --- Course Log Table ---
+        const courseBody = courses.map(c => [
+            `${c.semester} ${c.year}`,
+            c.name,
+            c.code,
+            c.credits,
+            c.grade,
+            c.isScience ? 'Yes' : 'No'
+        ]);
+        doc.autoTable({
+            head: [['Term', 'Course Name', 'Code', 'Credits', 'Grade', 'Science']],
+            body: courseBody,
+            startY: doc.autoTable.previous.finalY + 20,
+            headStyles: { fillColor: [41, 128, 185] },
+            didDrawPage: (data) => {
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Academic History', 14, data.cursor.y - 10);
+            }
+        });
+
+        doc.save(`PreProFolio_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+    };
+
+    const downloadCsv = (data, filename) => {
+        if (typeof window.Papa === 'undefined') {
+            alert('CSV library is not loaded yet. Please wait a moment and try again.');
+            return;
+        }
+        const csv = window.Papa.unparse(data);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleExportExperiencesCSV = () => {
+        const data = experiences.map(exp => ({
+            Date: exp.date?.toDate ? exp.date.toDate().toLocaleDateString() : 'N/A',
+            Category: exp.category,
+            Hours: exp.hours,
+            Location: exp.location,
+            Notes: exp.notes,
+        }));
+        downloadCsv(data, `PreProFolio_Experiences_${new Date().toISOString().split('T')[0]}.csv`);
+    };
+
+    const handleExportCoursesCSV = () => {
+        const data = courses.map(c => ({
+            Year: c.year,
+            Semester: c.semester,
+            'Course Name': c.name,
+            'Course Code': c.code,
+            Credits: c.credits,
+            Grade: c.grade,
+            'Is Science (BCPM)': c.isScience ? 'Yes' : 'No',
+        }));
+        downloadCsv(data, `PreProFolio_Courses_${new Date().toISOString().split('T')[0]}.csv`);
+    };
+
+    if (loading) {
+        return <LoadingScreen />;
+    }
+
+    return (
+        <div className="max-w-4xl mx-auto">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                <div>
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Export Your Report</h2>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">Generate a comprehensive report of your academic and experiential progress.</p>
+                </div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* PDF Export */}
+                    <div className="flex flex-col items-center text-center p-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        <h3 className="text-xl font-bold mb-2">PDF Report Card</h3>
+                        <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">Generate a single, printable PDF document summarizing your entire profile. Ideal for sharing with advisors or including in applications.</p>
+                        <button 
+                            onClick={handleExportPDF}
+                            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg shadow-md flex items-center justify-center gap-2"
+                        >
+                            Export as PDF
+                        </button>
+                    </div>
+                    {/* CSV Export */}
+                    <div className="flex flex-col items-center text-center p-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                        <h3 className="text-xl font-bold mb-2">CSV Data Export</h3>
+                        <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">Download your data in CSV format for use in spreadsheets like Excel or Google Sheets. Perfect for custom analysis and record-keeping.</p>
+                        <div className="w-full space-y-3">
+                            <button 
+                                onClick={handleExportExperiencesCSV}
+                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md flex items-center justify-center gap-2"
+                            >
+                                Export Experiences (CSV)
+                            </button>
+                             <button 
+                                onClick={handleExportCoursesCSV}
+                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md flex items-center justify-center gap-2"
+                            >
+                                Export Courses (CSV)
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

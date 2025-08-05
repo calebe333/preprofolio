@@ -4,12 +4,9 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
 import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc, onSnapshot, orderBy, writeBatch, limit } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-// --- External Libraries for Export & Animation ---
-// We will load these dynamically in the main component
-// jsPDF for PDF generation
-// jsPDF-AutoTable for creating tables in PDFs
-// PapaParse for CSV generation
-// Framer Motion for animations
+// --- External Libraries for Animation ---
+// Framer Motion will be loaded globally
+// Other libraries (jsPDF, PapaParse) will be loaded on demand.
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -45,7 +42,7 @@ const CATEGORIES = [
 ];
 const CATEGORY_NAMES = CATEGORIES.map(c => c.name);
 
-// --- NEW: Prerequisite Data ---
+// --- Prerequisite Data ---
 const PROGRAM_PREREQUISITES = {
     'Pre-Med': {
         'General Chemistry': [{ name: 'General Chemistry I w/ Lab', keywords: ['general chemistry i', 'chem 1'] }, { name: 'General Chemistry II w/ Lab', keywords: ['general chemistry ii', 'chem 2'] }],
@@ -154,21 +151,13 @@ function PreProFolioApp() {
 
     // Dynamically load external scripts
     useEffect(() => {
-        const scripts = [
-            'https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js',
-            'https://unpkg.com/jspdf-autotable@3.5.23/dist/jspdf.plugin.autotable.js',
-            'https://unpkg.com/papaparse@5.3.2/papaparse.min.js',
-            'https://cdn.jsdelivr.net/npm/framer-motion@10/dist/framer-motion.umd.js'
-        ];
-        
-        scripts.forEach(src => {
-            if (!document.querySelector(`script[src="${src}"]`)) {
-                const script = document.createElement('script');
-                script.src = src;
-                script.async = true;
-                document.body.appendChild(script);
-            }
-        });
+        const scriptSrc = 'https://cdn.jsdelivr.net/npm/framer-motion@10/dist/framer-motion.umd.js';
+        if (!document.querySelector(`script[src="${scriptSrc}"]`)) {
+            const script = document.createElement('script');
+            script.src = scriptSrc;
+            script.async = true;
+            document.body.appendChild(script);
+        }
     }, []);
 
     useEffect(() => {
@@ -331,18 +320,13 @@ const Header = ({ darkMode, setDarkMode, onSignOut, showSignOut, setCurrentPage 
 const LoginScreen = ({ onGuestLogin }) => {
     const handleSignIn = async () => {
         if (!auth || !provider) {
-            alert("Firebase is not configured. Please set up your firebaseConfig in the code to enable Google Sign-In.");
+            console.error("Firebase is not configured.");
             return;
         }
         try {
             await signInWithPopup(auth, provider);
         } catch (error) {
             console.error("Authentication error:", error);
-            if (error.code === 'auth/popup-blocked') {
-                alert("Popup was blocked by the browser. Please allow popups for this site and try again.");
-            } else {
-                alert("Authentication failed. Check the console for details.");
-            }
         }
     };
 
@@ -774,7 +758,6 @@ const ExperiencesPage = ({ isGuest }) => {
             setLoading(false);
         }, (error) => {
             console.error("Error fetching experiences:", error);
-            alert("Could not fetch experiences. Check Firestore indexes.");
             setLoading(false);
         });
 
@@ -1249,10 +1232,10 @@ const SettingsPage = ({ setCurrentPage }) => {
         try {
             const profileDocRef = doc(db, 'profiles', user.uid);
             await setDoc(profileDocRef, profile, { merge: true });
-            alert("Profile saved successfully!");
+            // Show success message
         } catch (error) {
             console.error("Error saving profile:", error);
-            alert("Failed to save profile.");
+            // Show error message
         } finally {
             setIsSaving(false);
         }
@@ -1356,7 +1339,6 @@ const GoalModal = ({ isOpen, onClose, onSuccess, currentGoals, isGuest }) => {
             onSuccess();
         } catch (error) {
             console.error("Error saving goals:", error);
-            alert("Failed to save goals. Please try again.");
         } finally {
             setIsSubmitting(false);
         }
@@ -1629,7 +1611,6 @@ const CourseLog = ({ isGuest }) => {
     );
 };
 
-// --- NEW: Prerequisite Tracker Component ---
 const PrerequisiteTracker = ({ isGuest }) => {
     const { user } = useAuth();
     const [profile, setProfile] = useState(null);
@@ -1783,7 +1764,6 @@ const CoursePlanner = ({ isGuest }) => {
     const [isSaving, setIsSaving] = useState(false);
     const [showAddCourseForm, setShowAddCourseForm] = useState(false);
 
-    // Auto-populate taken courses into the plan on initial load
     useEffect(() => {
         if (takenCourses.length > 0) {
             const autoPlan = {};
@@ -1792,18 +1772,15 @@ const CoursePlanner = ({ isGuest }) => {
                 if (!autoPlan[semesterId]) {
                     autoPlan[semesterId] = [];
                 }
-                // Avoid adding duplicates if already in a user-saved plan
                 const isAlreadyInPlan = Object.values(plan).flat().some(p => p.id === course.id);
                 if (!isAlreadyInPlan) {
                    autoPlan[semesterId].push(course);
                 }
             });
-            // Merge with existing plan, giving user's manual placement priority
             setPlan(prevPlan => {
                 const newPlan = {...autoPlan};
                 Object.keys(prevPlan).forEach(semId => {
                     if (newPlan[semId]) {
-                        // Filter out duplicates, keeping the one from the user's saved plan
                         const userPlannedIds = prevPlan[semId].map(c => c.id);
                         newPlan[semId] = newPlan[semId].filter(c => !userPlannedIds.includes(c.id));
                         newPlan[semId].push(...prevPlan[semId]);
@@ -1814,13 +1791,12 @@ const CoursePlanner = ({ isGuest }) => {
                 return newPlan;
             });
         }
-    }, [takenCourses]); // Rerun only when taken courses are loaded
+    }, [takenCourses]);
 
-    // Generate upcoming semesters for the planner
     const generateSemesters = () => {
         const semesters = [];
         const currentYear = new Date().getFullYear();
-        for (let i = -2; i < 5; i++) { // Show past 2 years as well
+        for (let i = -2; i < 5; i++) {
             const year = currentYear + i;
             semesters.push({ id: `Fall-${year}`, name: `Fall ${year}` });
             semesters.push({ id: `Spring-${year + 1}`, name: `Spring ${year + 1}` });
@@ -1843,20 +1819,17 @@ const CoursePlanner = ({ isGuest }) => {
             return;
         }
 
-        // Fetch all logged (taken) courses
         const coursesQuery = query(collection(db, "courses"), where("userId", "==", user.uid));
         const unsubscribeTaken = onSnapshot(coursesQuery, (snapshot) => {
             setTakenCourses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: 'taken' })));
             setLoading(false);
         });
 
-        // Fetch all planned courses
         const plannedQuery = query(collection(db, "plannedCourses"), where("userId", "==", user.uid));
         const unsubscribePlanned = onSnapshot(plannedQuery, (snapshot) => {
             setPlannedCourses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: 'planned' })));
         });
 
-        // Fetch the saved course plan
         const planDocRef = doc(db, 'coursePlans', user.uid);
         const unsubscribePlan = onSnapshot(planDocRef, (docSnap) => {
             if (docSnap.exists()) {
@@ -1908,17 +1881,14 @@ const CoursePlanner = ({ isGuest }) => {
 
     const handleSavePlan = async () => {
         if (isGuest) {
-            alert("Saving is disabled in Guest Mode.");
             return;
         }
         setIsSaving(true);
         try {
             const planDocRef = doc(db, 'coursePlans', user.uid);
             await setDoc(planDocRef, { plan });
-            alert("Plan saved successfully!");
         } catch (error) {
             console.error("Error saving plan:", error);
-            alert("Failed to save plan.");
         } finally {
             setIsSaving(false);
         }
@@ -1933,7 +1903,6 @@ const CoursePlanner = ({ isGuest }) => {
 
     return (
         <div className="flex flex-col lg:flex-row gap-6">
-            {/* Course Bank */}
             <div className="lg:w-1/3 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg flex flex-col">
                 <h3 className="text-lg font-bold mb-4">Course Bank</h3>
                 <div className="space-y-2 flex-grow overflow-y-auto pr-2">
@@ -1968,7 +1937,6 @@ const CoursePlanner = ({ isGuest }) => {
                 </div>
             </div>
 
-            {/* Planner Grid */}
             <div className="lg:w-2/3">
                  <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-bold">Your Course Plan</h3>
@@ -2020,7 +1988,6 @@ const AddPlannedCourseForm = ({ userId, isGuest, onClose }) => {
         e.preventDefault();
         if (!name) return;
         if (isGuest) {
-            alert("Adding courses is disabled in Guest Mode.");
             return;
         }
         setIsSubmitting(true);
@@ -2036,7 +2003,6 @@ const AddPlannedCourseForm = ({ userId, isGuest, onClose }) => {
             onClose();
         } catch (error) {
             console.error("Error adding planned course:", error);
-            alert("Failed to add course.");
         } finally {
             setIsSubmitting(false);
         }
@@ -2249,6 +2215,22 @@ const ExportPage = ({ isGuest }) => {
     const [profile, setProfile] = useState({});
     const [experiences, setExperiences] = useState([]);
     const [courses, setCourses] = useState([]);
+    const [isExporting, setIsExporting] = useState(false);
+    const [exportMessage, setExportMessage] = useState('');
+
+    // Helper to dynamically load scripts
+    const loadScript = (src) => {
+        return new Promise((resolve, reject) => {
+            if (document.querySelector(`script[src="${src}"]`)) {
+                return resolve();
+            }
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error(`Script load error for ${src}`));
+            document.body.appendChild(script);
+        });
+    };
 
     useEffect(() => {
         if (isGuest) {
@@ -2268,26 +2250,21 @@ const ExportPage = ({ isGuest }) => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                // Fetch Profile
                 const profileDocRef = doc(db, 'profiles', user.uid);
                 const profileSnap = await getDoc(profileDocRef);
-                if (profileSnap.exists()) {
-                    setProfile(profileSnap.data());
-                }
+                if (profileSnap.exists()) setProfile(profileSnap.data());
 
-                // Fetch Experiences
                 const expQuery = query(collection(db, "experiences"), where("userId", "==", user.uid), orderBy("date", "desc"));
                 const expSnap = await getDocs(expQuery);
                 setExperiences(expSnap.docs.map(d => ({...d.data(), id: d.id})));
 
-                // Fetch Courses
                 const courseQuery = query(collection(db, "courses"), where("userId", "==", user.uid), orderBy("year", "desc"), orderBy("semester", "desc"));
                 const courseSnap = await getDocs(courseQuery);
                 setCourses(courseSnap.docs.map(d => ({...d.data(), id: d.id})));
 
             } catch (error) {
                 console.error("Error fetching data for export:", error);
-                alert("Could not fetch all data for the report. Please try again.");
+                setExportMessage("Could not fetch data for the report.");
             } finally {
                 setLoading(false);
             }
@@ -2296,104 +2273,97 @@ const ExportPage = ({ isGuest }) => {
         fetchData();
     }, [user, isGuest]);
 
-    const handleExportPDF = () => {
-        if (typeof window.jspdf === 'undefined') {
-            alert('PDF library is not loaded yet. Please wait a moment and try again.');
-            return;
+    const handleExportPDF = async () => {
+        setIsExporting(true);
+        setExportMessage('');
+        try {
+            await loadScript('https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js');
+            await loadScript('https://unpkg.com/jspdf-autotable@3.8.1/dist/jspdf.plugin.autotable.js');
+
+            if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF.prototype.autoTable === 'undefined') {
+                throw new Error('PDF libraries not loaded correctly.');
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(22);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Pre-Professional Report Card', 105, 20, { align: 'center' });
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Report generated on: ${new Date().toLocaleDateString()}`, 105, 28, { align: 'center' });
+
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Applicant Profile', 14, 45);
+            doc.setLineWidth(0.5);
+            doc.line(14, 47, 196, 47);
+
+            const profileName = isGuest ? "Guest User" : user?.displayName || 'N/A';
+            const profileEmail = isGuest ? "guest@example.com" : user?.email || 'N/A';
+            const profileTrack = profile.track === 'Other' ? profile.customTrack : profile.track;
+
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Name: ${profileName}`, 16, 55);
+            doc.text(`Email: ${profileEmail}`, 16, 61);
+            doc.text(`Track: ${profileTrack || 'N/A'}`, 105, 55);
+            doc.text(`Application Year: ${profile.applicationYear || 'N/A'}`, 105, 61);
+
+            const totalHours = experiences.reduce((sum, exp) => sum + (exp.hours || 0), 0);
+            const cumulativeGpa = calculateGPA(courses);
+            const scienceGpa = calculateGPA(courses, true);
+
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Academic & Experience Summary', 14, 75);
+            doc.line(14, 77, 196, 77);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Cumulative GPA: ${cumulativeGpa}`, 16, 85);
+            doc.text(`Science (BCPM) GPA: ${scienceGpa}`, 105, 85);
+            doc.text(`Total Experience Hours: ${totalHours.toFixed(1)}`, 16, 91);
+
+            const expBody = experiences.map(exp => [
+                exp.date?.toDate ? exp.date.toDate().toLocaleDateString() : 'N/A',
+                exp.category,
+                exp.location,
+                exp.hours.toFixed(1),
+                exp.notes || ''
+            ]);
+            doc.autoTable({
+                head: [['Date', 'Category', 'Location/Org', 'Hours', 'Notes']],
+                body: expBody,
+                startY: 100,
+                headStyles: { fillColor: [22, 160, 133] },
+            });
+            
+            const courseBody = courses.map(c => [
+                `${c.semester} ${c.year}`,
+                c.name,
+                c.code,
+                c.credits,
+                c.grade,
+                c.isScience ? 'Yes' : 'No'
+            ]);
+            doc.autoTable({
+                head: [['Term', 'Course Name', 'Code', 'Credits', 'Grade', 'Science']],
+                body: courseBody,
+                startY: doc.autoTable.previous.finalY + 15,
+                headStyles: { fillColor: [41, 128, 185] },
+            });
+
+            doc.save(`PreProFolio_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+        } catch (error) {
+            console.error("PDF Export error:", error);
+            setExportMessage("Failed to export PDF. Please try again.");
+        } finally {
+            setIsExporting(false);
         }
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-
-        // --- Document Header ---
-        doc.setFontSize(22);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Pre-Professional Report Card', 105, 20, { align: 'center' });
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Report generated on: ${new Date().toLocaleDateString()}`, 105, 28, { align: 'center' });
-
-        // --- Profile Section ---
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Applicant Profile', 14, 45);
-        doc.setLineWidth(0.5);
-        doc.line(14, 47, 196, 47);
-
-        const profileName = isGuest ? "Guest User" : user?.displayName || 'N/A';
-        const profileEmail = isGuest ? "guest@example.com" : user?.email || 'N/A';
-        const profileTrack = profile.track === 'Other' ? profile.customTrack : profile.track;
-
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Name: ${profileName}`, 16, 55);
-        doc.text(`Email: ${profileEmail}`, 16, 61);
-        doc.text(`Track: ${profileTrack || 'N/A'}`, 105, 55);
-        doc.text(`Application Year: ${profile.applicationYear || 'N/A'}`, 105, 61);
-
-        // --- Summary Section ---
-        const totalHours = experiences.reduce((sum, exp) => sum + (exp.hours || 0), 0);
-        const cumulativeGpa = calculateGPA(courses);
-        const scienceGpa = calculateGPA(courses, true);
-
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Academic & Experience Summary', 14, 75);
-        doc.line(14, 77, 196, 77);
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Cumulative GPA: ${cumulativeGpa}`, 16, 85);
-        doc.text(`Science (BCPM) GPA: ${scienceGpa}`, 105, 85);
-        doc.text(`Total Experience Hours: ${totalHours.toFixed(1)}`, 16, 91);
-
-        // --- Experience Log Table ---
-        const expBody = experiences.map(exp => [
-            exp.date?.toDate ? exp.date.toDate().toLocaleDateString() : 'N/A',
-            exp.category,
-            exp.location,
-            exp.hours.toFixed(1),
-            exp.notes || ''
-        ]);
-        doc.autoTable({
-            head: [['Date', 'Category', 'Location/Org', 'Hours', 'Notes']],
-            body: expBody,
-            startY: 100,
-            headStyles: { fillColor: [22, 160, 133] },
-            didDrawPage: (data) => {
-                doc.setFontSize(16);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Experience Log', 14, data.cursor.y - 10);
-            }
-        });
-        
-        // --- Course Log Table ---
-        const courseBody = courses.map(c => [
-            `${c.semester} ${c.year}`,
-            c.name,
-            c.code,
-            c.credits,
-            c.grade,
-            c.isScience ? 'Yes' : 'No'
-        ]);
-        doc.autoTable({
-            head: [['Term', 'Course Name', 'Code', 'Credits', 'Grade', 'Science']],
-            body: courseBody,
-            startY: doc.autoTable.previous.finalY + 20,
-            headStyles: { fillColor: [41, 128, 185] },
-            didDrawPage: (data) => {
-                doc.setFontSize(16);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Academic History', 14, data.cursor.y - 10);
-            }
-        });
-
-        doc.save(`PreProFolio_Report_${new Date().toISOString().split('T')[0]}.pdf`);
     };
-
+    
     const downloadCsv = (data, filename) => {
-        if (typeof window.Papa === 'undefined') {
-            alert('CSV library is not loaded yet. Please wait a moment and try again.');
-            return;
-        }
         const csv = window.Papa.unparse(data);
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
@@ -2406,28 +2376,52 @@ const ExportPage = ({ isGuest }) => {
         document.body.removeChild(link);
     };
 
-    const handleExportExperiencesCSV = () => {
-        const data = experiences.map(exp => ({
-            Date: exp.date?.toDate ? exp.date.toDate().toLocaleDateString() : 'N/A',
-            Category: exp.category,
-            Hours: exp.hours,
-            Location: exp.location,
-            Notes: exp.notes,
-        }));
-        downloadCsv(data, `PreProFolio_Experiences_${new Date().toISOString().split('T')[0]}.csv`);
+    const handleExportExperiencesCSV = async () => {
+        setIsExporting(true);
+        setExportMessage('');
+        try {
+            await loadScript('https://unpkg.com/papaparse@5.3.2/papaparse.min.js');
+            if (typeof window.Papa === 'undefined') throw new Error('CSV library not loaded.');
+            
+            const data = experiences.map(exp => ({
+                Date: exp.date?.toDate ? exp.date.toDate().toLocaleDateString() : 'N/A',
+                Category: exp.category,
+                Hours: exp.hours,
+                Location: exp.location,
+                Notes: exp.notes,
+            }));
+            downloadCsv(data, `PreProFolio_Experiences_${new Date().toISOString().split('T')[0]}.csv`);
+        } catch (error) {
+            console.error("CSV Export error:", error);
+            setExportMessage("Failed to export Experiences CSV.");
+        } finally {
+            setIsExporting(false);
+        }
     };
 
-    const handleExportCoursesCSV = () => {
-        const data = courses.map(c => ({
-            Year: c.year,
-            Semester: c.semester,
-            'Course Name': c.name,
-            'Course Code': c.code,
-            Credits: c.credits,
-            Grade: c.grade,
-            'Is Science (BCPM)': c.isScience ? 'Yes' : 'No',
-        }));
-        downloadCsv(data, `PreProFolio_Courses_${new Date().toISOString().split('T')[0]}.csv`);
+    const handleExportCoursesCSV = async () => {
+        setIsExporting(true);
+        setExportMessage('');
+        try {
+            await loadScript('https://unpkg.com/papaparse@5.3.2/papaparse.min.js');
+            if (typeof window.Papa === 'undefined') throw new Error('CSV library not loaded.');
+
+            const data = courses.map(c => ({
+                Year: c.year,
+                Semester: c.semester,
+                'Course Name': c.name,
+                'Course Code': c.code,
+                Credits: c.credits,
+                Grade: c.grade,
+                'Is Science (BCPM)': c.isScience ? 'Yes' : 'No',
+            }));
+            downloadCsv(data, `PreProFolio_Courses_${new Date().toISOString().split('T')[0]}.csv`);
+        } catch(error) {
+            console.error("CSV Export error:", error);
+            setExportMessage("Failed to export Courses CSV.");
+        } finally {
+            setIsExporting(false);
+        }
     };
 
     if (loading) {
@@ -2451,9 +2445,10 @@ const ExportPage = ({ isGuest }) => {
                         <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">Generate a single, printable PDF document summarizing your entire profile. Ideal for sharing with advisors or including in applications.</p>
                         <button 
                             onClick={handleExportPDF}
-                            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg shadow-md flex items-center justify-center gap-2"
+                            disabled={isExporting}
+                            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                         >
-                            Export as PDF
+                            {isExporting ? 'Exporting...' : 'Export as PDF'}
                         </button>
                     </div>
                     {/* CSV Export */}
@@ -2464,19 +2459,22 @@ const ExportPage = ({ isGuest }) => {
                         <div className="w-full space-y-3">
                             <button 
                                 onClick={handleExportExperiencesCSV}
-                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md flex items-center justify-center gap-2"
+                                disabled={isExporting}
+                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                             >
-                                Export Experiences (CSV)
+                                {isExporting ? '...' : 'Export Experiences (CSV)'}
                             </button>
                              <button 
                                 onClick={handleExportCoursesCSV}
-                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md flex items-center justify-center gap-2"
+                                disabled={isExporting}
+                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                             >
-                                Export Courses (CSV)
+                                {isExporting ? '...' : 'Export Courses (CSV)'}
                             </button>
                         </div>
                     </div>
                 </div>
+                {exportMessage && <p className="text-center mt-6 text-red-500">{exportMessage}</p>}
             </div>
         </div>
     );

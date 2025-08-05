@@ -70,24 +70,65 @@ const PROGRAM_PREREQUISITES = {
     }
 };
 
-// --- NEW: Application Timeline Data ---
+// --- Default Timeline Data for new users ---
 const TIMELINE_MILESTONES = {
     'Pre-Med': [
-        { id: 'mcat_prep', title: 'Begin MCAT Preparation', description: 'Start a structured study plan for the MCAT.', category: 'Preparation' },
-        { id: 'primary_app', title: 'Submit Primary Application (AMCAS)', description: 'The AMCAS application typically opens in early May.', category: 'Primary Application' },
-        { id: 'secondary_app', title: 'Receive and Submit Secondary Applications', description: 'Secondaries are sent after your primary is verified. Aim for a two-week turnaround.', category: 'Secondary Application' },
-        { id: 'interviews', title: 'Interview Season', description: 'Interviews typically run from September through March.', category: 'Interviews' },
+        // Early Preparation
+        { id: 'early_gpa', title: 'Focus on Strong GPA', description: 'Establish a strong academic foundation, especially in science (BCPM) courses. Aim for a competitive GPA from the start.', category: 'Early Preparation' },
+        { id: 'early_exp', title: 'Gain Clinical & Volunteer Experience', description: 'Start seeking out meaningful patient care, shadowing, and volunteer opportunities to explore the field and show commitment.', category: 'Early Preparation' },
+        { id: 'early_research', title: 'Get Involved in Research', description: 'If interested, join a research lab. This demonstrates intellectual curiosity and can lead to strong letters of recommendation.', category: 'Early Preparation' },
+        { id: 'early_lor', title: 'Build Relationships with Professors', description: 'Get to know your professors in and out of the classroom. You will need strong letters of recommendation (LORs) later.', category: 'Early Preparation' },
+        // Pre-Application Year
+        { id: 'mcat_prep', title: 'Begin MCAT Preparation', description: 'Create a structured study plan for the MCAT. This typically requires 300-400 hours over 3-6 months.', category: 'Pre-Application Year' },
+        { id: 'personal_statement', title: 'Draft Personal Statement', description: 'Start brainstorming and writing your personal statement. Reflect on your journey and motivations for pursuing medicine.', category: 'Pre-Application Year' },
+        { id: 'request_lors', title: 'Request Letters of Recommendation', description: 'Formally ask your chosen letter writers at least 3-4 months before your application submission. Provide them with your CV, personal statement, and a list of schools.', category: 'Pre-Application Year' },
+        { id: 'research_schools', title: 'Finalize School List', description: 'Research medical schools and create a balanced list of target, reach, and safety schools based on your stats and mission fit.', category: 'Pre-Application Year' },
+        // Primary Application
+        { id: 'take_mcat', title: 'Take the MCAT', description: 'Take the MCAT by late spring of your application year to ensure your score is available for verification.', category: 'Primary Application' },
+        { id: 'primary_app', title: 'Submit Primary Application (AMCAS)', description: 'The AMCAS application typically opens in early May. Submit as early as possible after it opens.', category: 'Primary Application' },
+        // Secondary Application
+        { id: 'casper_preview', title: 'Complete CASPer/AAMC PREview', description: 'Register for and complete any required situational judgment tests. Check your schools\' requirements.', category: 'Secondary Application' },
+        { id: 'secondary_app', title: 'Receive & Submit Secondary Applications', description: 'Secondaries are sent after your primary is verified. Aim for a two-week turnaround for each one.', category: 'Secondary Application' },
+        // Interviews
+        { id: 'interview_prep', title: 'Prepare for Interviews', description: 'Practice common interview questions (MMI and traditional). Conduct mock interviews with your school\'s career center.', category: 'Interviews' },
+        { id: 'interviews', title: 'Interview Season', description: 'Interviews typically run from September through March. Be professional, prepared, and be yourself!', category: 'Interviews' },
+        // Post-Interview
+        { id: 'update_letters', title: 'Send Update Letters/Letters of Intent', description: 'If appropriate, send meaningful updates to schools you have interviewed at, or a letter of intent to your top choice.', category: 'Post-Interview' },
+        // Decisions & Matriculation
+        { id: 'acceptance', title: 'Receive Acceptance Offers', description: 'Offers can come any time after your interview, often starting in October. Celebrate your hard work!', category: 'Decisions & Matriculation' },
+        { id: 'choose_school', title: 'Choose Your School', description: 'By the AAMC deadline (typically late April), narrow down your acceptances and commit to one school.', category: 'Decisions & Matriculation' },
+        { id: 'financial_aid', title: 'Complete Financial Aid', description: 'Complete the FAFSA and any school-specific financial aid applications.', category: 'Decisions & Matriculation' },
     ],
     'Pre-PA': [
-        { id: 'caspa_open', title: 'CASPA Application Opens', description: 'The Centralized Application Service for Physician Assistants usually opens in late April.', category: 'Primary Application' },
-        { id: 'gre_prep', title: 'Prepare for and Take the GRE', description: 'If required by your target schools, complete the GRE.', category: 'Preparation' },
-        { id: 'supplemental_apps', title: 'Complete Supplemental Applications', description: 'Many programs have their own secondary applications.', category: 'Secondary Application' },
-        { id: 'interviews', title: 'Interview Season', description: 'PA school interviews often occur in the fall and winter.', category: 'Interviews' },
+        { id: 'pa_early_gpa', title: 'Focus on Strong GPA', description: 'Maintain a high GPA, particularly in science prerequisite courses, as this is a key factor for PA programs.', category: 'Early Preparation' },
+        { id: 'pa_early_pce', title: 'Accrue Patient Care Experience (PCE) Hours', description: 'Start gaining high-quality, hands-on PCE early. Many programs have significant hour requirements.', category: 'Early Preparation' },
+        { id: 'pa_early_lor', title: 'Build Professional Relationships', description: 'Develop strong relationships with professors, PAs you shadow, and work supervisors for future LORs.', category: 'Early Preparation' },
+        { id: 'pa_gre_prep', title: 'Prepare for and Take the GRE', description: 'If required by your target schools, create a study plan and take the GRE well before application deadlines.', category: 'Pre-Application Year' },
+        { id: 'pa_personal_statement', title: 'Draft Personal Statement (Narrative)', description: 'Begin writing your CASPA personal narrative. Focus on your journey and why you are a good fit for the PA profession.', category: 'Pre-Application Year' },
+        { id: 'pa_request_lors', title: 'Request Letters of Recommendation', description: 'Request LORs from clinicians, professors, and supervisors who know you well. Give them ample time and information.', category: 'Pre-Application Year' },
+        { id: 'pa_caspa_open', title: 'CASPA Application Opens', description: 'The Centralized Application Service for Physician Assistants usually opens in late April. Prepare your application materials in advance.', category: 'Primary Application' },
+        { id: 'pa_submit_caspa', title: 'Submit CASPA Application', description: 'Submit your primary application as early as possible, as many PA programs use rolling admissions.', category: 'Primary Application' },
+        { id: 'pa_casper', title: 'Complete CASPer/Situational Judgment Tests', description: 'Check if your target programs require the CASPer or other tests and complete them in a timely manner.', category: 'Secondary Application' },
+        { id: 'pa_supplemental_apps', title: 'Complete Supplemental Applications', description: 'Many programs have their own secondary applications. Submit them promptly, usually within 1-2 weeks of receipt.', category: 'Secondary Application' },
+        { id: 'pa_interview_prep', title: 'Prepare for Interviews', description: 'PA school interviews can be varied (group, MMI, traditional). Research formats and practice extensively.', category: 'Interviews' },
+        { id: 'pa_interviews', title: 'Interview Season', description: 'PA school interviews often occur in the fall and winter. Professionalism is key.', category: 'Interviews' },
+        { id: 'pa_acceptance', title: 'Receive Acceptance Offers', description: 'PA programs often use a rolling admissions process, with offers sent throughout the cycle.', category: 'Decisions & Matriculation' },
+        { id: 'pa_choose_school', title: 'Make Your Decision', description: 'Review your offers and accept a position at your chosen program, being mindful of deposit deadlines.', category: 'Decisions & Matriculation' },
     ],
     'Pre-Dental': [
-        { id: 'dat_prep', title: 'Prepare for and Take the DAT', description: 'The Dental Admission Test is a critical component of your application.', category: 'Preparation' },
-        { id: 'aadsas_open', title: 'AADSAS Application Opens', description: 'The Associated American Dental Schools Application Service typically opens in June.', category: 'Primary Application' },
-        { id: 'interviews', title: 'Interview Season', description: 'Dental school interviews often run from September to February.', category: 'Interviews' },
+        { id: 'dental_early_gpa', title: 'Maintain High GPA', description: 'Focus on achieving a high overall and science GPA, as this is a critical screening metric for dental schools.', category: 'Early Preparation' },
+        { id: 'dental_early_shadowing', title: 'Gain Dental Shadowing Hours', description: 'Start shadowing general dentists and specialists to understand the profession. Aim for 100+ hours.', category: 'Early Preparation' },
+        { id: 'dental_manual_dexterity', title: 'Develop Manual Dexterity', description: 'Engage in hobbies that require fine motor skills, such as playing an instrument, drawing, or model building.', category: 'Early Preparation' },
+        { id: 'dat_prep', title: 'Prepare for and Take the DAT', description: 'The Dental Admission Test is crucial. Plan a rigorous study schedule (3-4 months) and aim to take it in the spring or early summer of your application year.', category: 'Pre-Application Year' },
+        { id: 'dental_personal_statement', title: 'Draft Personal Statement', description: 'Write a compelling personal statement that explains your motivation for dentistry and highlights your unique qualities.', category: 'Pre-Application Year' },
+        { id: 'dental_request_lors', title: 'Request Letters of Recommendation', description: 'Secure letters from science professors and dentists you have shadowed. Ask them well in advance.', category: 'Pre-Application Year' },
+        { id: 'aadsas_open', title: 'AADSAS Application Opens', description: 'The Associated American Dental Schools Application Service typically opens in June. Have your materials ready to submit early.', category: 'Primary Application' },
+        { id: 'submit_aadsas', title: 'Submit AADSAS Application', description: 'Submit your application early in the cycle to take advantage of rolling admissions.', category: 'Primary Application' },
+        { id: 'dental_secondaries', title: 'Complete Secondary Applications', description: 'Some schools may send secondary applications. Complete and return these promptly.', category: 'Secondary Application' },
+        { id: 'dental_interview_prep', title: 'Prepare for Interviews', description: 'Practice answering common questions and be prepared to discuss your manual dexterity skills and knowledge of the dental field.', category: 'Interviews' },
+        { id: 'dental_interviews', title: 'Interview Season', description: 'Dental school interviews often run from September to February.', category: 'Interviews' },
+        { id: 'acceptance_day', title: 'Decision Day', description: 'The first day schools can extend offers is typically December 1st. You may receive calls or emails.', category: 'Decisions & Matriculation' },
+        { id: 'dental_choose_school', title: 'Accept an Offer', description: 'You will have a deadline to place a deposit and secure your seat at your chosen school. Be mindful of traffic rules.', category: 'Decisions & Matriculation' },
     ]
 };
 
@@ -2149,6 +2190,294 @@ const CourseModal = ({ isOpen, onClose, onSuccess, course, isGuest }) => {
         </div>
     );
 };
+
+// --- TIMELINE PAGE COMPONENT (REVISED FOR CUSTOMIZATION) ---
+const TimelinePage = ({ isGuest }) => {
+    const { user } = useAuth();
+    const [profile, setProfile] = useState(null);
+    const [milestones, setMilestones] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingMilestone, setEditingMilestone] = useState(null);
+    const motion = window.motion;
+
+    // Fetch user profile and custom timeline
+    useEffect(() => {
+        if (isGuest) {
+            const mockProfile = getMockData().profile;
+            setProfile(mockProfile);
+            const defaultMilestones = TIMELINE_MILESTONES[mockProfile.track] || [];
+            setMilestones(defaultMilestones.map(m => ({ ...m, isCompleted: false })));
+            setLoading(false);
+            return;
+        }
+
+        if (!user || !db) {
+            setLoading(false);
+            return;
+        }
+
+        let profileUnsubscribe;
+        let timelineUnsubscribe;
+
+        // Fetch Profile to determine the track
+        const profileDocRef = doc(db, 'profiles', user.uid);
+        profileUnsubscribe = onSnapshot(profileDocRef, (docSnap) => {
+            const userProfile = docSnap.exists() ? docSnap.data() : { track: 'Pre-Med' };
+            setProfile(userProfile);
+
+            // Once we have the profile, fetch or create the timeline
+            const timelineCollectionRef = collection(db, 'users', user.uid, 'timeline');
+            timelineUnsubscribe = onSnapshot(query(timelineCollectionRef, orderBy('createdAt')), async (snapshot) => {
+                if (snapshot.empty && userProfile.track) {
+                    // First time user for this feature, populate with defaults
+                    const defaultMilestones = TIMELINE_MILESTONES[userProfile.track] || [];
+                    const batch = writeBatch(db);
+                    defaultMilestones.forEach((milestone, index) => {
+                        const newMilestoneRef = doc(timelineCollectionRef);
+                        batch.set(newMilestoneRef, {
+                            ...milestone,
+                            isCompleted: false,
+                            createdAt: serverTimestamp()
+                        });
+                    });
+                    await batch.commit();
+                } else {
+                    const userMilestones = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setMilestones(userMilestones);
+                }
+                setLoading(false);
+            });
+        });
+
+        return () => {
+            if (profileUnsubscribe) profileUnsubscribe();
+            if (timelineUnsubscribe) timelineUnsubscribe();
+        };
+    }, [user, isGuest]);
+
+    const handleToggleComplete = async (milestone) => {
+        if (isGuest) {
+            // Handle guest mode state update
+            setMilestones(milestones.map(m => m.id === milestone.id ? { ...m, isCompleted: !m.isCompleted } : m));
+            return;
+        }
+        const milestoneRef = doc(db, 'users', user.uid, 'timeline', milestone.id);
+        await updateDoc(milestoneRef, { isCompleted: !milestone.isCompleted });
+    };
+
+    const handleDelete = async (milestoneId) => {
+        if (isGuest) {
+            setMilestones(milestones.filter(m => m.id !== milestoneId));
+            return;
+        }
+        if (window.confirm("Are you sure you want to delete this milestone?")) {
+            const milestoneRef = doc(db, 'users', user.uid, 'timeline', milestoneId);
+            await deleteDoc(milestoneRef);
+        }
+    };
+
+    const handleOpenModal = (milestone = null) => {
+        setEditingMilestone(milestone);
+        setIsModalOpen(true);
+    };
+
+    if (loading) return <LoadingScreen />;
+
+    const userTrack = profile?.track || 'Pre-Med';
+    
+    // Get unique categories for the modal dropdown
+    const uniqueCategories = [...new Set(milestones.map(m => m.category || 'General').sort())];
+    
+    // Group milestones by their category for a sectioned display
+    const milestonesByCategory = milestones.reduce((acc, milestone) => {
+        const category = milestone.category || 'General';
+        if (!acc[category]) {
+            acc[category] = [];
+        }
+        acc[category].push(milestone);
+        return acc;
+    }, {});
+
+    return (
+        <div className="max-w-4xl mx-auto px-4">
+            <div className="text-center mb-8">
+                <h2 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">Application Timeline</h2>
+                <p className="mt-3 text-lg text-gray-600 dark:text-gray-400">
+                    Your personalized roadmap for the <span className="font-bold text-blue-600 dark:text-blue-400">{userTrack}</span> track.
+                </p>
+            </div>
+             <div className="text-center mb-12">
+                <button onClick={() => handleOpenModal()} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md flex items-center justify-center gap-2 transform hover:scale-105 transition-transform mx-auto">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
+                    Add Milestone
+                </button>
+            </div>
+
+            <div className="relative pl-8 md:pl-0">
+                <div className="absolute left-4 md:left-1/2 -translate-x-1/2 h-full w-1 bg-gray-200 dark:bg-gray-700 rounded-full" aria-hidden="true"></div>
+                <div className="space-y-16">
+                    {Object.entries(milestonesByCategory).map(([category, categoryMilestones]) => (
+                        <div key={category} className="relative">
+                            <div className="absolute left-4 md:left-1/2 -translate-x-1/2 -top-1 w-8 h-8 bg-white dark:bg-gray-900 flex items-center justify-center rounded-full">
+                                <div className="w-4 h-4 bg-blue-500 rounded-full z-10"></div>
+                            </div>
+                            <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-200 md:text-center mb-8">{category}</h3>
+                            <div className="space-y-12">
+                                {categoryMilestones.map((milestone, index) => {
+                                    const isLeft = index % 2 === 0;
+                                    return (
+                                        <div key={milestone.id} className={`relative flex items-start w-full md:w-1/2 ${isLeft ? 'md:ml-auto md:pl-12' : 'md:mr-auto md:pr-12 md:text-right'}`}>
+                                            <div className={`absolute left-4 md:left-auto md:right-auto ${isLeft ? 'md:-left-4' : 'md:-right-4'} top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-5 rounded-full border-4 border-gray-50 dark:border-gray-900 z-10 transition-colors ${milestone.isCompleted ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                                            <div className={`w-full p-5 bg-white dark:bg-gray-800 rounded-xl shadow-lg border-l-4 md:border-l-0 ${isLeft ? 'md:border-r-4' : 'md:border-l-4'} transition-colors ${milestone.isCompleted ? 'border-green-500' : 'border-blue-500'}`}>
+                                                <div className={`flex items-center ${isLeft ? 'justify-end' : 'justify-start'} gap-2 mb-2`}>
+                                                     <button onClick={() => handleDelete(milestone.id)} className="text-gray-400 hover:text-red-500 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg></button>
+                                                    <button onClick={() => handleOpenModal(milestone)} className="text-gray-400 hover:text-blue-500 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg></button>
+                                                </div>
+                                                <h4 className="text-lg font-bold text-gray-900 dark:text-white">{milestone.title}</h4>
+                                                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{milestone.description}</p>
+                                                <div className="mt-4">
+                                                    <button onClick={() => handleToggleComplete(milestone)} className={`w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 ${milestone.isCompleted ? 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/50 dark:text-green-300 dark:hover:bg-green-900' : 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}>
+                                                        {milestone.isCompleted ? 'Marked as Complete' : 'Mark as Complete'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            {motion && <motion.AnimatePresence>
+                {isModalOpen && <TimelineModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} milestone={editingMilestone} isGuest={isGuest} existingCategories={uniqueCategories} />}
+            </motion.AnimatePresence>}
+            {!motion && isModalOpen && <TimelineModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} milestone={editingMilestone} isGuest={isGuest} existingCategories={uniqueCategories} />}
+        </div>
+    );
+};
+
+// --- MODAL FOR ADDING/EDITING TIMELINE MILESTONES ---
+const TimelineModal = ({ isOpen, onClose, milestone, isGuest, existingCategories }) => {
+    const { user } = useAuth();
+    const [formData, setFormData] = useState({ title: '', description: '', category: '' });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const motion = window.motion;
+
+    useEffect(() => {
+        if (milestone) {
+            setFormData({
+                title: milestone.title || '',
+                description: milestone.description || '',
+                category: milestone.category || 'General'
+            });
+        } else {
+            setFormData({ title: '', description: '', category: 'General' });
+        }
+    }, [milestone]);
+
+    if (!isOpen) return null;
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!formData.title) return;
+        setIsSubmitting(true);
+
+        if (isGuest) {
+            console.log("Guest mode: Save timeline item", formData);
+            onClose();
+            return;
+        }
+
+        const timelineCollectionRef = collection(db, 'users', user.uid, 'timeline');
+        
+        try {
+            if (milestone) {
+                // Update existing milestone
+                const milestoneRef = doc(timelineCollectionRef, milestone.id);
+                await updateDoc(milestoneRef, formData);
+            } else {
+                // Add new milestone
+                await addDoc(timelineCollectionRef, {
+                    ...formData,
+                    isCompleted: false,
+                    createdAt: serverTimestamp()
+                });
+            }
+            onClose();
+        } catch (error) {
+            console.error("Error saving milestone:", error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
+    const modalContent = (
+        <form onSubmit={handleSubmit} className="p-6">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{milestone ? 'Edit' : 'Add'} Milestone</h2>
+                <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <div className="space-y-4">
+                <div>
+                    <label className="block mb-2 text-sm font-medium">Title</label>
+                    <input type="text" name="title" value={formData.title} onChange={handleChange} required placeholder="e.g., Submit AMCAS Application" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                </div>
+                <div>
+                    <label className="block mb-2 text-sm font-medium">Description</label>
+                    <textarea name="description" value={formData.description} onChange={handleChange} rows="3" placeholder="Add details or notes here..." className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600"></textarea>
+                </div>
+                <div>
+                    <label className="block mb-2 text-sm font-medium">Category</label>
+                    <input 
+                        type="text" 
+                        name="category" 
+                        value={formData.category} 
+                        onChange={handleChange} 
+                        required 
+                        placeholder="e.g., Primary Application" 
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600"
+                        list="category-suggestions"
+                    />
+                    <datalist id="category-suggestions">
+                        {existingCategories && existingCategories.map(cat => <option key={cat} value={cat} />)}
+                    </datalist>
+                </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-4">
+                <button type="button" onClick={onClose} className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">Cancel</button>
+                <button type="submit" disabled={isSubmitting} className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">{isSubmitting ? 'Saving...' : 'Save'}</button>
+            </div>
+        </form>
+    );
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
+            {motion ? (
+                 <motion.div 
+                    className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto"
+                    initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    {modalContent}
+                </motion.div>
+            ) : (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">{modalContent}</div>
+            )}
+        </div>
+    );
+};
+
 
 // --- EXPORT PAGE COMPONENT ---
 const ExportPage = ({ isGuest }) => {

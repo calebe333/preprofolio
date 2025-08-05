@@ -2217,8 +2217,9 @@ const ExportPage = ({ isGuest }) => {
     const [courses, setCourses] = useState([]);
     const [isExporting, setIsExporting] = useState(false);
     const [exportMessage, setExportMessage] = useState('');
-    const [scriptsLoaded, setScriptsLoaded] = useState(false);
+    const [scriptsReady, setScriptsReady] = useState(false);
 
+    // Helper to dynamically load a script
     const loadScript = (src) => {
         return new Promise((resolve, reject) => {
             if (document.querySelector(`script[src="${src}"]`)) {
@@ -2226,25 +2227,28 @@ const ExportPage = ({ isGuest }) => {
             }
             const script = document.createElement('script');
             script.src = src;
+            script.async = true;
             script.onload = () => resolve();
             script.onerror = () => reject(new Error(`Script load error for ${src}`));
             document.body.appendChild(script);
         });
     };
     
+    // Load all necessary export scripts when the component mounts
     useEffect(() => {
-        Promise.all([
-            loadScript('https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js'),
-            loadScript('https://unpkg.com/jspdf-autotable@3.8.1/dist/jspdf.plugin.autotable.js'),
-            loadScript('https://unpkg.com/papaparse@5.3.2/papaparse.min.js')
-        ]).then(() => {
-            setScriptsLoaded(true);
-        }).catch(error => {
-            console.error("Failed to load export scripts:", error);
-            setExportMessage("Could not load export libraries. Please refresh and try again.");
-        });
+        loadScript('https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js')
+            .then(() => loadScript('https://unpkg.com/jspdf-autotable@3.8.1/dist/jspdf.plugin.autotable.js'))
+            .then(() => loadScript('https://unpkg.com/papaparse@5.3.2/papaparse.min.js'))
+            .then(() => {
+                setScriptsReady(true);
+            })
+            .catch(error => {
+                console.error("Failed to load export scripts:", error);
+                setExportMessage("Could not load export libraries. Please refresh and try again.");
+            });
     }, []);
 
+    // Fetch user data
     useEffect(() => {
         if (isGuest) {
             const mock = getMockData();
@@ -2427,10 +2431,10 @@ const ExportPage = ({ isGuest }) => {
                         <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">Generate a single, printable PDF document summarizing your entire profile. Ideal for sharing with advisors or including in applications.</p>
                         <button 
                             onClick={handleExportPDF}
-                            disabled={isExporting || !scriptsLoaded}
+                            disabled={isExporting || !scriptsReady}
                             className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                         >
-                            {isExporting ? 'Exporting...' : !scriptsLoaded ? 'Loading...' : 'Export as PDF'}
+                            {isExporting ? 'Exporting...' : !scriptsReady ? 'Loading...' : 'Export as PDF'}
                         </button>
                     </div>
                     {/* CSV Export */}
@@ -2441,17 +2445,17 @@ const ExportPage = ({ isGuest }) => {
                         <div className="w-full space-y-3">
                             <button 
                                 onClick={handleExportExperiencesCSV}
-                                disabled={isExporting || !scriptsLoaded}
+                                disabled={isExporting || !scriptsReady}
                                 className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                             >
-                                {!scriptsLoaded ? 'Loading...' : 'Export Experiences (CSV)'}
+                                {!scriptsReady ? 'Loading...' : 'Export Experiences (CSV)'}
                             </button>
                              <button 
                                 onClick={handleExportCoursesCSV}
-                                disabled={isExporting || !scriptsLoaded}
+                                disabled={isExporting || !scriptsReady}
                                 className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                             >
-                                {!scriptsLoaded ? 'Loading...' : 'Export Courses (CSV)'}
+                                {!scriptsReady ? 'Loading...' : 'Export Courses (CSV)'}
                             </button>
                         </div>
                     </div>

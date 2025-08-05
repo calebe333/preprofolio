@@ -2217,8 +2217,8 @@ const ExportPage = ({ isGuest }) => {
     const [courses, setCourses] = useState([]);
     const [isExporting, setIsExporting] = useState(false);
     const [exportMessage, setExportMessage] = useState('');
+    const [scriptsLoaded, setScriptsLoaded] = useState(false);
 
-    // Helper to dynamically load scripts
     const loadScript = (src) => {
         return new Promise((resolve, reject) => {
             if (document.querySelector(`script[src="${src}"]`)) {
@@ -2231,6 +2231,19 @@ const ExportPage = ({ isGuest }) => {
             document.body.appendChild(script);
         });
     };
+    
+    useEffect(() => {
+        Promise.all([
+            loadScript('https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js'),
+            loadScript('https://unpkg.com/jspdf-autotable@3.8.1/dist/jspdf.plugin.autotable.js'),
+            loadScript('https://unpkg.com/papaparse@5.3.2/papaparse.min.js')
+        ]).then(() => {
+            setScriptsLoaded(true);
+        }).catch(error => {
+            console.error("Failed to load export scripts:", error);
+            setExportMessage("Could not load export libraries. Please refresh and try again.");
+        });
+    }, []);
 
     useEffect(() => {
         if (isGuest) {
@@ -2273,17 +2286,10 @@ const ExportPage = ({ isGuest }) => {
         fetchData();
     }, [user, isGuest]);
 
-    const handleExportPDF = async () => {
+    const handleExportPDF = () => {
         setIsExporting(true);
         setExportMessage('');
         try {
-            await loadScript('https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js');
-            await loadScript('https://unpkg.com/jspdf-autotable@3.8.1/dist/jspdf.plugin.autotable.js');
-
-            if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF.prototype.autoTable === 'undefined') {
-                throw new Error('PDF libraries not loaded correctly.');
-            }
-
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
@@ -2376,52 +2382,28 @@ const ExportPage = ({ isGuest }) => {
         document.body.removeChild(link);
     };
 
-    const handleExportExperiencesCSV = async () => {
-        setIsExporting(true);
-        setExportMessage('');
-        try {
-            await loadScript('https://unpkg.com/papaparse@5.3.2/papaparse.min.js');
-            if (typeof window.Papa === 'undefined') throw new Error('CSV library not loaded.');
-            
-            const data = experiences.map(exp => ({
-                Date: exp.date?.toDate ? exp.date.toDate().toLocaleDateString() : 'N/A',
-                Category: exp.category,
-                Hours: exp.hours,
-                Location: exp.location,
-                Notes: exp.notes,
-            }));
-            downloadCsv(data, `PreProFolio_Experiences_${new Date().toISOString().split('T')[0]}.csv`);
-        } catch (error) {
-            console.error("CSV Export error:", error);
-            setExportMessage("Failed to export Experiences CSV.");
-        } finally {
-            setIsExporting(false);
-        }
+    const handleExportExperiencesCSV = () => {
+        const data = experiences.map(exp => ({
+            Date: exp.date?.toDate ? exp.date.toDate().toLocaleDateString() : 'N/A',
+            Category: exp.category,
+            Hours: exp.hours,
+            Location: exp.location,
+            Notes: exp.notes,
+        }));
+        downloadCsv(data, `PreProFolio_Experiences_${new Date().toISOString().split('T')[0]}.csv`);
     };
 
-    const handleExportCoursesCSV = async () => {
-        setIsExporting(true);
-        setExportMessage('');
-        try {
-            await loadScript('https://unpkg.com/papaparse@5.3.2/papaparse.min.js');
-            if (typeof window.Papa === 'undefined') throw new Error('CSV library not loaded.');
-
-            const data = courses.map(c => ({
-                Year: c.year,
-                Semester: c.semester,
-                'Course Name': c.name,
-                'Course Code': c.code,
-                Credits: c.credits,
-                Grade: c.grade,
-                'Is Science (BCPM)': c.isScience ? 'Yes' : 'No',
-            }));
-            downloadCsv(data, `PreProFolio_Courses_${new Date().toISOString().split('T')[0]}.csv`);
-        } catch(error) {
-            console.error("CSV Export error:", error);
-            setExportMessage("Failed to export Courses CSV.");
-        } finally {
-            setIsExporting(false);
-        }
+    const handleExportCoursesCSV = () => {
+        const data = courses.map(c => ({
+            Year: c.year,
+            Semester: c.semester,
+            'Course Name': c.name,
+            'Course Code': c.code,
+            Credits: c.credits,
+            Grade: c.grade,
+            'Is Science (BCPM)': c.isScience ? 'Yes' : 'No',
+        }));
+        downloadCsv(data, `PreProFolio_Courses_${new Date().toISOString().split('T')[0]}.csv`);
     };
 
     if (loading) {
@@ -2445,10 +2427,10 @@ const ExportPage = ({ isGuest }) => {
                         <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">Generate a single, printable PDF document summarizing your entire profile. Ideal for sharing with advisors or including in applications.</p>
                         <button 
                             onClick={handleExportPDF}
-                            disabled={isExporting}
+                            disabled={isExporting || !scriptsLoaded}
                             className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                         >
-                            {isExporting ? 'Exporting...' : 'Export as PDF'}
+                            {isExporting ? 'Exporting...' : !scriptsLoaded ? 'Loading...' : 'Export as PDF'}
                         </button>
                     </div>
                     {/* CSV Export */}
@@ -2459,17 +2441,17 @@ const ExportPage = ({ isGuest }) => {
                         <div className="w-full space-y-3">
                             <button 
                                 onClick={handleExportExperiencesCSV}
-                                disabled={isExporting}
+                                disabled={isExporting || !scriptsLoaded}
                                 className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                             >
-                                {isExporting ? '...' : 'Export Experiences (CSV)'}
+                                {!scriptsLoaded ? 'Loading...' : 'Export Experiences (CSV)'}
                             </button>
                              <button 
                                 onClick={handleExportCoursesCSV}
-                                disabled={isExporting}
+                                disabled={isExporting || !scriptsLoaded}
                                 className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                             >
-                                {isExporting ? '...' : 'Export Courses (CSV)'}
+                                {!scriptsLoaded ? 'Loading...' : 'Export Courses (CSV)'}
                             </button>
                         </div>
                     </div>

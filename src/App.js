@@ -132,6 +132,20 @@ const TIMELINE_MILESTONES = {
     ]
 };
 
+// --- Mock School Data (To be replaced by Firestore/API) ---
+const MOCK_SCHOOLS = [
+    { id: 'school1', name: 'Johns Hopkins University School of Medicine', location: 'Baltimore, MD', program: 'MD', avgMCAT: '521', avgGPA: '3.94' },
+    { id: 'school2', name: 'Harvard Medical School', location: 'Boston, MA', program: 'MD', avgMCAT: '520', avgGPA: '3.9' },
+    { id: 'school3', name: 'Stanford University School of Medicine', location: 'Stanford, CA', program: 'MD', avgMCAT: '519', avgGPA: '3.89' },
+    { id: 'school4', name: 'Duke University School of Medicine', location: 'Durham, NC', program: 'MD', avgMCAT: '518', avgGPA: '3.85' },
+    { id: 'school5', name: 'University of Pennsylvania (Perelman)', location: 'Philadelphia, PA', program: 'MD', avgMCAT: '521', avgGPA: '3.91' },
+    { id: 'school6', name: 'Yale School of Medicine', location: 'New Haven, CT', program: 'MD', avgMCAT: '519', avgGPA: '3.87' },
+    { id: 'school7', name: 'University of Iowa Carver College of Medicine', location: 'Iowa City, IA', program: 'PA', avgGPA: '3.71', avgGRE: '310' },
+    { id: 'school8', name: 'Baylor College of Medicine', location: 'Houston, TX', program: 'PA', avgGPA: '3.8', avgGRE: '315' },
+    { id: 'school9', name: 'University of the Pacific (Dugoni)', location: 'San Francisco, CA', program: 'DDS', avgDAT: '22', avgGPA: '3.6' },
+    { id: 'school10', name: 'UCLA School of Dentistry', location: 'Los Angeles, CA', program: 'DDS', avgDAT: '23', avgGPA: '3.75' },
+];
+
 
 // --- Mock Data for Guest Mode ---
 const getMockData = () => ({
@@ -163,7 +177,10 @@ const getMockData = () => ({
         track: 'Pre-Med',
         applicationYear: new Date().getFullYear() + 1,
         bio: 'Aspiring physician with a passion for emergency medicine.'
-    }
+    },
+    mySchools: [
+        { schoolId: 'school1', name: 'Johns Hopkins University School of Medicine', location: 'Baltimore, MD', program: 'MD', status: 'Researching', notes: 'Top choice, love their research focus.' },
+    ]
 });
 
 // --- Authentication Context ---
@@ -2775,6 +2792,422 @@ const ExportPage = ({ isGuest }) => {
                 </div>
                 {exportMessage && <p className="text-center mt-6 text-red-500">{exportMessage}</p>}
             </div>
+        </div>
+    );
+};
+
+// --- SCHOOLS PAGE ---
+const SchoolsPage = ({ isGuest }) => {
+    const { user } = useAuth();
+    const [view, setView] = useState('mySchools'); // 'mySchools' or 'browse'
+    const [allSchools, setAllSchools] = useState([]);
+    const [mySchools, setMySchools] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [isSchoolModalOpen, setIsSchoolModalOpen] = useState(false);
+    const [editingSchool, setEditingSchool] = useState(null); // For editing notes/status or adding new school
+    const motion = window.motion;
+
+    // Fetch master list of schools and user's specific school list
+    useEffect(() => {
+        // For now, using a mock list. This can be converted to a Firestore call.
+        setAllSchools(MOCK_SCHOOLS);
+
+        if (isGuest) {
+            setMySchools(getMockData().mySchools);
+            setLoading(false);
+            return;
+        }
+
+        if (!user) {
+            setLoading(false);
+            return;
+        }
+
+        const mySchoolsCollectionRef = collection(db, 'users', user.uid, 'mySchools');
+        const unsubscribe = onSnapshot(mySchoolsCollectionRef, (snapshot) => {
+            const userSchools = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setMySchools(userSchools);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [user, isGuest]);
+
+    const handleAddSchoolToList = async (school) => {
+        if (isGuest) {
+            const newSchool = { ...school, schoolId: school.id, status: 'Researching', notes: '' };
+            setMySchools(prev => [...prev, newSchool]);
+            return;
+        }
+        const mySchoolsCollectionRef = collection(db, 'users', user.uid, 'mySchools');
+        const newSchoolData = {
+            schoolId: school.id,
+            name: school.name,
+            location: school.location,
+            program: school.program,
+            status: 'Researching', // Default status
+            notes: '',
+            addedAt: serverTimestamp()
+        };
+        await addDoc(mySchoolsCollectionRef, newSchoolData);
+    };
+
+    const handleUpdateMySchool = async (updatedSchool) => {
+        if (isGuest) {
+            setMySchools(mySchools.map(s => s.id === updatedSchool.id ? updatedSchool : s));
+            setIsSchoolModalOpen(false);
+            return;
+        }
+        const schoolDocRef = doc(db, 'users', user.uid, 'mySchools', updatedSchool.id);
+        await updateDoc(schoolDocRef, {
+            status: updatedSchool.status,
+            notes: updatedSchool.notes,
+        });
+        setIsSchoolModalOpen(false);
+    };
+    
+    const handleAddNewSchool = async (newSchoolData) => {
+         // This function is for staff/admins to add to the main list.
+         // For now, it adds to the local state. In a real app, this would be a Firestore call to a master 'schools' collection.
+         const newSchool = { ...newSchoolData, id: `custom-${Date.now()}` };
+         setAllSchools(prev => [...prev, newSchool]);
+         setIsSchoolModalOpen(false);
+    };
+
+    const handleRemoveFromMyList = async (schoolId) => {
+        if (isGuest) {
+            setMySchools(mySchools.filter(s => s.id !== schoolId));
+            return;
+        }
+        if (window.confirm("Are you sure you want to remove this school from your list?")) {
+            const schoolDocRef = doc(db, 'users', user.uid, 'mySchools', schoolId);
+            await deleteDoc(schoolDocRef);
+        }
+    };
+
+
+    const openModalForEdit = (school) => {
+        setEditingSchool(school);
+        setIsSchoolModalOpen(true);
+    };
+    
+    const openModalForNew = () => {
+        setEditingSchool(null); // Indicates we are adding a new school to master list
+        setIsSchoolModalOpen(true);
+    };
+
+    return (
+        <div className="max-w-7xl mx-auto space-y-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white">School Tracker</h2>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">
+                        {view === 'mySchools' ? 'Manage your personal list of schools.' : 'Browse and discover new programs.'}
+                    </p>
+                </div>
+                <div className="bg-gray-200 dark:bg-gray-700 p-1 rounded-lg flex">
+                    <button 
+                        onClick={() => setView('mySchools')}
+                        className={`px-4 py-1.5 text-sm font-semibold rounded-md ${view === 'mySchools' ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow' : 'text-gray-600 dark:text-gray-300'}`}
+                    >
+                        My Schools
+                    </button>
+                    <button 
+                        onClick={() => setView('browse')}
+                        className={`px-4 py-1.5 text-sm font-semibold rounded-md ${view === 'browse' ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow' : 'text-gray-600 dark:text-gray-300'}`}
+                    >
+                        Browse All
+                    </button>
+                </div>
+            </div>
+
+            {view === 'mySchools' && (
+                <MySchoolsList
+                    mySchools={mySchools}
+                    onEdit={openModalForEdit}
+                    onDelete={handleRemoveFromMyList}
+                    loading={loading}
+                />
+            )}
+
+            {view === 'browse' && (
+                <BrowseSchoolsList
+                    allSchools={allSchools}
+                    mySchoolIds={mySchools.map(s => s.schoolId)}
+                    onAdd={handleAddSchoolToList}
+                    onAddNewSchool={openModalForNew}
+                    loading={loading}
+                />
+            )}
+            
+            {motion && <motion.AnimatePresence>
+                {isSchoolModalOpen && (
+                    <SchoolModal 
+                        isOpen={isSchoolModalOpen}
+                        onClose={() => setIsSchoolModalOpen(false)}
+                        school={editingSchool}
+                        onSaveMySchool={handleUpdateMySchool}
+                        onSaveNewSchool={handleAddNewSchool}
+                    />
+                )}
+            </motion.AnimatePresence>}
+            {!motion && isSchoolModalOpen && (
+                 <SchoolModal 
+                    isOpen={isSchoolModalOpen}
+                    onClose={() => setIsSchoolModalOpen(false)}
+                    school={editingSchool}
+                    onSaveMySchool={handleUpdateMySchool}
+                    onSaveNewSchool={handleAddNewSchool}
+                />
+            )}
+        </div>
+    );
+};
+
+const MySchoolsList = ({ mySchools, onEdit, onDelete, loading }) => {
+    if (loading) return <LoadingScreen />;
+    if (mySchools.length === 0) {
+        return (
+            <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No schools on your list yet</h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Go to "Browse All" to start adding schools.</p>
+            </div>
+        );
+    }
+
+    const SchoolCard = ({ school, onEdit, onDelete }) => {
+        const statusColors = {
+            'Researching': 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
+            'Applying': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
+            'Interviewing': 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
+            'Accepted': 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+            'Rejected': 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
+        };
+        return (
+            <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-lg flex flex-col justify-between">
+                <div>
+                    <div className="flex justify-between items-start">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">{school.name}</h3>
+                        <span className={`text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full ${statusColors[school.status]}`}>{school.status}</span>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{school.location} - {school.program}</p>
+                    <p className="mt-4 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-md min-h-[50px]">{school.notes || 'No notes yet.'}</p>
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                    <button onClick={() => onEdit(school)} className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">Edit</button>
+                    <button onClick={() => onDelete(school.id)} className="text-sm font-medium text-red-600 hover:underline dark:text-red-400">Remove</button>
+                </div>
+            </div>
+        );
+    };
+    
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {mySchools.map(school => <SchoolCard key={school.id} school={school} onEdit={onEdit} onDelete={onDelete} />)}
+        </div>
+    );
+};
+
+const BrowseSchoolsList = ({ allSchools, mySchoolIds, onAdd, onAddNewSchool, loading }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [programFilter, setProgramFilter] = useState('All');
+
+    const filteredSchools = allSchools.filter(school => {
+        const nameMatch = school.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const locationMatch = school.location.toLowerCase().includes(searchTerm.toLowerCase());
+        const programMatch = programFilter === 'All' || school.program === programFilter;
+        return (nameMatch || locationMatch) && programMatch;
+    });
+
+    return (
+        <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-lg">
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                <div className="flex-grow flex gap-2 w-full sm:w-auto">
+                    <input 
+                        type="text"
+                        placeholder="Search by name or location..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                    />
+                    <select
+                        value={programFilter}
+                        onChange={(e) => setProgramFilter(e.target.value)}
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto p-2.5 dark:bg-gray-700 dark:border-gray-600"
+                    >
+                        <option value="All">All Programs</option>
+                        <option value="MD">MD</option>
+                        <option value="PA">PA</option>
+                        <option value="DDS">DDS</option>
+                    </select>
+                </div>
+                <button onClick={onAddNewSchool} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 w-full sm:w-auto">
+                    Add New School
+                </button>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                     <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                        <tr>
+                            <th scope="col" className="px-6 py-3">School Name</th>
+                            <th scope="col" className="px-6 py-3">Location</th>
+                            <th scope="col" className="px-6 py-3">Program</th>
+                            <th scope="col" className="px-6 py-3 text-center">Avg. MCAT/DAT</th>
+                            <th scope="col" className="px-6 py-3 text-center">Avg. GPA</th>
+                            <th scope="col" className="px-6 py-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {loading ? (
+                            <tr><td colSpan="6" className="text-center p-8">Loading schools...</td></tr>
+                        ) : filteredSchools.map(school => (
+                            <tr key={school.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{school.name}</td>
+                                <td className="px-6 py-4">{school.location}</td>
+                                <td className="px-6 py-4">{school.program}</td>
+                                <td className="px-6 py-4 text-center">{school.avgMCAT || school.avgDAT || 'N/A'}</td>
+                                <td className="px-6 py-4 text-center">{school.avgGPA || 'N/A'}</td>
+                                <td className="px-6 py-4">
+                                    {mySchoolIds.includes(school.id) ? (
+                                        <span className="text-sm font-semibold text-green-600">Added</span>
+                                    ) : (
+                                        <button onClick={() => onAdd(school)} className="text-blue-600 hover:text-blue-800 font-semibold">Add</button>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
+const SchoolModal = ({ isOpen, onClose, school, onSaveMySchool, onSaveNewSchool }) => {
+    // This modal serves two purposes:
+    // 1. Editing a school in "My List" (status, notes)
+    // 2. Adding a new school to the master list
+    const isEditingMySchool = school && school.hasOwnProperty('status');
+    const isAddingNewSchool = !school;
+    
+    const [formData, setFormData] = useState({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const motion = window.motion;
+
+    useEffect(() => {
+        if (isEditingMySchool) {
+            setFormData({
+                id: school.id,
+                status: school.status,
+                notes: school.notes
+            });
+        } else { // Adding a new school
+            setFormData({
+                name: '',
+                location: '',
+                program: 'MD',
+                avgMCAT: '',
+                avgGPA: '',
+                avgDAT: '',
+                avgGRE: ''
+            });
+        }
+    }, [school, isOpen]);
+
+    if (!isOpen) return null;
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        if (isEditingMySchool) {
+            onSaveMySchool(formData);
+        } else {
+            onSaveNewSchool(formData);
+        }
+        setIsSubmitting(false);
+    };
+    
+    const renderEditMySchoolForm = () => (
+        <>
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{school.name}</h2>
+                <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+             <div className="space-y-4">
+                <div>
+                    <label className="block mb-2 text-sm font-medium">Application Status</label>
+                    <select name="status" value={formData.status} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
+                        <option>Researching</option>
+                        <option>Applying</option>
+                        <option>Interviewing</option>
+                        <option>Accepted</option>
+                        <option>Rejected</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block mb-2 text-sm font-medium">My Notes</label>
+                    <textarea name="notes" value={formData.notes} onChange={handleChange} rows="4" placeholder="e.g., Spoke with Dr. Smith at the conference, great research in cardiology..." className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600"></textarea>
+                </div>
+            </div>
+        </>
+    );
+
+    const renderAddNewSchoolForm = () => (
+         <>
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Add New School</h2>
+                 <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Add a new school to the master list. This is intended for admin/staff use.</p>
+             <div className="space-y-4">
+                <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="School Name" required className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                <input type="text" name="location" value={formData.location} onChange={handleChange} placeholder="Location (e.g., City, ST)" required className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                <select name="program" value={formData.program} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
+                    <option>MD</option><option>PA</option><option>DDS</option>
+                </select>
+                <input type="text" name="avgGPA" value={formData.avgGPA} onChange={handleChange} placeholder="Average GPA" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
+                {formData.program === 'MD' && <input type="text" name="avgMCAT" value={formData.avgMCAT} onChange={handleChange} placeholder="Average MCAT" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />}
+                {formData.program === 'DDS' && <input type="text" name="avgDAT" value={formData.avgDAT} onChange={handleChange} placeholder="Average DAT" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />}
+                {formData.program === 'PA' && <input type="text" name="avgGRE" value={formData.avgGRE} onChange={handleChange} placeholder="Average GRE" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />}
+            </div>
+        </>
+    );
+
+    const modalContent = (
+        <form onSubmit={handleSubmit} className="p-6">
+            {isEditingMySchool ? renderEditMySchoolForm() : renderAddNewSchoolForm()}
+            <div className="mt-6 flex justify-end gap-4">
+                <button type="button" onClick={onClose} className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">Cancel</button>
+                <button type="submit" disabled={isSubmitting} className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">{isSubmitting ? 'Saving...' : 'Save'}</button>
+            </div>
+        </form>
+    );
+
+     return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
+            {motion ? (
+                 <motion.div 
+                    className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto"
+                    initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    {modalContent}
+                </motion.div>
+            ) : (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">{modalContent}</div>
+            )}
         </div>
     );
 };

@@ -132,18 +132,19 @@ const TIMELINE_MILESTONES = {
     ]
 };
 
-// --- Mock School Data (To be replaced by Firestore/API) ---
-const MOCK_SCHOOLS = [
-    { id: 'school1', name: 'Johns Hopkins University School of Medicine', location: 'Baltimore, MD', program: 'MD', avgMCAT: '521', avgGPA: '3.94' },
-    { id: 'school2', name: 'Harvard Medical School', location: 'Boston, MA', program: 'MD', avgMCAT: '520', avgGPA: '3.9' },
-    { id: 'school3', name: 'Stanford University School of Medicine', location: 'Stanford, CA', program: 'MD', avgMCAT: '519', avgGPA: '3.89' },
-    { id: 'school4', name: 'Duke University School of Medicine', location: 'Durham, NC', program: 'MD', avgMCAT: '518', avgGPA: '3.85' },
-    { id: 'school5', name: 'University of Pennsylvania (Perelman)', location: 'Philadelphia, PA', program: 'MD', avgMCAT: '521', avgGPA: '3.91' },
-    { id: 'school6', name: 'Yale School of Medicine', location: 'New Haven, CT', program: 'MD', avgMCAT: '519', avgGPA: '3.87' },
-    { id: 'school7', name: 'University of Iowa Carver College of Medicine', location: 'Iowa City, IA', program: 'PA', avgGPA: '3.71', avgGRE: '310' },
-    { id: 'school8', name: 'Baylor College of Medicine', location: 'Houston, TX', program: 'PA', avgGPA: '3.8', avgGRE: '315' },
-    { id: 'school9', name: 'University of the Pacific (Dugoni)', location: 'San Francisco, CA', program: 'DDS', avgDAT: '22', avgGPA: '3.6' },
-    { id: 'school10', name: 'UCLA School of Dentistry', location: 'Los Angeles, CA', program: 'DDS', avgDAT: '23', avgGPA: '3.75' },
+// --- Base School Data (Used to seed Firestore) ---
+const SEED_SCHOOLS = [
+    { id: 'school1', name: 'Johns Hopkins University School of Medicine', location: 'Baltimore, MD', program: 'MD', avgMCAT: '521', avgGPA: '3.94', verified: true },
+    { id: 'school2', name: 'Harvard Medical School', location: 'Boston, MA', program: 'MD', avgMCAT: '520', avgGPA: '3.9', verified: true },
+    { id: 'school3', name: 'Stanford University School of Medicine', location: 'Stanford, CA', program: 'MD', avgMCAT: '519', avgGPA: '3.89', verified: true },
+    { id: 'school4', name: 'Duke University School of Medicine', location: 'Durham, NC', program: 'MD', avgMCAT: '518', avgGPA: '3.85', verified: true },
+    { id: 'school5', name: 'University of Pennsylvania (Perelman)', location: 'Philadelphia, PA', program: 'MD', avgMCAT: '521', avgGPA: '3.91', verified: true },
+    { id: 'school6', name: 'Yale School of Medicine', location: 'New Haven, CT', program: 'MD', avgMCAT: '519', avgGPA: '3.87', verified: true },
+    { id: 'school7', name: 'University of Iowa Carver College of Medicine', location: 'Iowa City, IA', program: 'PA', avgGPA: '3.71', avgGRE: '310', verified: true },
+    { id: 'school8', name: 'Baylor College of Medicine', location: 'Houston, TX', program: 'PA', avgGPA: '3.8', avgGRE: '315', verified: true },
+    { id: 'school9', name: 'University of the Pacific (Dugoni)', location: 'San Francisco, CA', program: 'DDS', avgDAT: '22', avgGPA: '3.6', verified: true },
+    { id: 'school10', name: 'UCLA School of Dentistry', location: 'Los Angeles, CA', program: 'DDS', avgDAT: '23', avgGPA: '3.75', verified: true },
+    { id: 'school11', name: 'Wake Forest School of Medicine', location: 'Winston-Salem, NC', program: 'PA', avgGPA: '3.65', avgGRE: '308', verified: false },
 ];
 
 
@@ -180,7 +181,8 @@ const getMockData = () => ({
     },
     mySchools: [
         { schoolId: 'school1', name: 'Johns Hopkins University School of Medicine', location: 'Baltimore, MD', program: 'MD', status: 'Researching', notes: 'Top choice, love their research focus.' },
-    ]
+    ],
+    allSchools: SEED_SCHOOLS,
 });
 
 // --- Authentication Context ---
@@ -2796,7 +2798,7 @@ const ExportPage = ({ isGuest }) => {
     );
 };
 
-// --- SCHOOLS PAGE ---
+// --- SCHOOLS PAGE (REVISED FOR CROWD-SOURCING) ---
 const SchoolsPage = ({ isGuest }) => {
     const { user } = useAuth();
     const [view, setView] = useState('mySchools'); // 'mySchools' or 'browse'
@@ -2804,16 +2806,15 @@ const SchoolsPage = ({ isGuest }) => {
     const [mySchools, setMySchools] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isSchoolModalOpen, setIsSchoolModalOpen] = useState(false);
-    const [editingSchool, setEditingSchool] = useState(null); // For editing notes/status or adding new school
+    const [editingSchool, setEditingSchool] = useState(null);
     const motion = window.motion;
 
     // Fetch master list of schools and user's specific school list
     useEffect(() => {
-        // For now, using a mock list. This can be converted to a Firestore call.
-        setAllSchools(MOCK_SCHOOLS);
-
         if (isGuest) {
-            setMySchools(getMockData().mySchools);
+            const mock = getMockData();
+            setAllSchools(mock.allSchools);
+            setMySchools(mock.mySchools);
             setLoading(false);
             return;
         }
@@ -2823,14 +2824,25 @@ const SchoolsPage = ({ isGuest }) => {
             return;
         }
 
-        const mySchoolsCollectionRef = collection(db, 'users', user.uid, 'mySchools');
-        const unsubscribe = onSnapshot(mySchoolsCollectionRef, (snapshot) => {
-            const userSchools = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setMySchools(userSchools);
+        // Listen to the master 'schools' collection
+        const schoolsCollectionRef = collection(db, 'schools');
+        const unsubscribeSchools = onSnapshot(schoolsCollectionRef, (snapshot) => {
+            const schoolsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAllSchools(schoolsData);
             setLoading(false);
         });
 
-        return () => unsubscribe();
+        // Listen to the user's personal 'mySchools' list
+        const mySchoolsCollectionRef = collection(db, 'users', user.uid, 'mySchools');
+        const unsubscribeMySchools = onSnapshot(mySchoolsCollectionRef, (snapshot) => {
+            const userSchools = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setMySchools(userSchools);
+        });
+
+        return () => {
+            unsubscribeSchools();
+            unsubscribeMySchools();
+        };
     }, [user, isGuest]);
 
     const handleAddSchoolToList = async (school) => {
@@ -2849,7 +2861,14 @@ const SchoolsPage = ({ isGuest }) => {
             notes: '',
             addedAt: serverTimestamp()
         };
-        await addDoc(mySchoolsCollectionRef, newSchoolData);
+        // Check if school is already in the list to prevent duplicates
+        const q = query(mySchoolsCollectionRef, where("schoolId", "==", school.id));
+        const existing = await getDocs(q);
+        if (existing.empty) {
+            await addDoc(mySchoolsCollectionRef, newSchoolData);
+        } else {
+            console.log("School is already on the user's list.");
+        }
     };
 
     const handleUpdateMySchool = async (updatedSchool) => {
@@ -2867,11 +2886,27 @@ const SchoolsPage = ({ isGuest }) => {
     };
     
     const handleAddNewSchool = async (newSchoolData) => {
-         // This function is for staff/admins to add to the main list.
-         // For now, it adds to the local state. In a real app, this would be a Firestore call to a master 'schools' collection.
-         const newSchool = { ...newSchoolData, id: `custom-${Date.now()}` };
-         setAllSchools(prev => [...prev, newSchool]);
-         setIsSchoolModalOpen(false);
+        if (isGuest) {
+            const newSchool = { ...newSchoolData, id: `guest-${Date.now()}`, verified: false };
+            setAllSchools(prev => [...prev, newSchool]);
+            setIsSchoolModalOpen(false);
+            return;
+        }
+        // Any user can add a school, but it will be unverified.
+        await addDoc(collection(db, 'schools'), {
+            ...newSchoolData,
+            verified: false, // All user submissions start as unverified
+            submittedBy: user.uid,
+            submittedAt: serverTimestamp(),
+        });
+        setIsSchoolModalOpen(false);
+    };
+    
+    const handleVerifySchool = async (schoolId) => {
+        if (isGuest) return; // Cannot verify in guest mode
+        // In a real app, you'd check for admin role here.
+        const schoolDocRef = doc(db, 'schools', schoolId);
+        await updateDoc(schoolDocRef, { verified: true });
     };
 
     const handleRemoveFromMyList = async (schoolId) => {
@@ -2885,14 +2920,13 @@ const SchoolsPage = ({ isGuest }) => {
         }
     };
 
-
     const openModalForEdit = (school) => {
         setEditingSchool(school);
         setIsSchoolModalOpen(true);
     };
     
     const openModalForNew = () => {
-        setEditingSchool(null); // Indicates we are adding a new school to master list
+        setEditingSchool(null);
         setIsSchoolModalOpen(true);
     };
 
@@ -2936,6 +2970,7 @@ const SchoolsPage = ({ isGuest }) => {
                     mySchoolIds={mySchools.map(s => s.schoolId)}
                     onAdd={handleAddSchoolToList}
                     onAddNewSchool={openModalForNew}
+                    onVerify={handleVerifySchool}
                     loading={loading}
                 />
             )}
@@ -3009,7 +3044,7 @@ const MySchoolsList = ({ mySchools, onEdit, onDelete, loading }) => {
     );
 };
 
-const BrowseSchoolsList = ({ allSchools, mySchoolIds, onAdd, onAddNewSchool, loading }) => {
+const BrowseSchoolsList = ({ allSchools, mySchoolIds, onAdd, onAddNewSchool, onVerify, loading }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [programFilter, setProgramFilter] = useState('All');
 
@@ -3043,7 +3078,7 @@ const BrowseSchoolsList = ({ allSchools, mySchoolIds, onAdd, onAddNewSchool, loa
                     </select>
                 </div>
                 <button onClick={onAddNewSchool} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 w-full sm:w-auto">
-                    Add New School
+                    Suggest New School
                 </button>
             </div>
             <div className="overflow-x-auto">
@@ -3063,17 +3098,29 @@ const BrowseSchoolsList = ({ allSchools, mySchoolIds, onAdd, onAddNewSchool, loa
                             <tr><td colSpan="6" className="text-center p-8">Loading schools...</td></tr>
                         ) : filteredSchools.map(school => (
                             <tr key={school.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-                                <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{school.name}</td>
+                                <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                                    {school.name}
+                                    {school.verified ? (
+                                        <span className="ml-2 text-xs font-medium text-green-800 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-0.5 rounded-full">Verified</span>
+                                    ) : (
+                                        <span className="ml-2 text-xs font-medium text-yellow-800 bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-300 px-2 py-0.5 rounded-full">Unverified</span>
+                                    )}
+                                </td>
                                 <td className="px-6 py-4">{school.location}</td>
                                 <td className="px-6 py-4">{school.program}</td>
                                 <td className="px-6 py-4 text-center">{school.avgMCAT || school.avgDAT || 'N/A'}</td>
                                 <td className="px-6 py-4 text-center">{school.avgGPA || 'N/A'}</td>
                                 <td className="px-6 py-4">
-                                    {mySchoolIds.includes(school.id) ? (
-                                        <span className="text-sm font-semibold text-green-600">Added</span>
-                                    ) : (
-                                        <button onClick={() => onAdd(school)} className="text-blue-600 hover:text-blue-800 font-semibold">Add</button>
-                                    )}
+                                    <div className="flex items-center gap-2">
+                                        {mySchoolIds.includes(school.id) ? (
+                                            <span className="text-sm font-semibold text-gray-500">Added</span>
+                                        ) : (
+                                            <button onClick={() => onAdd(school)} className="text-blue-600 hover:text-blue-800 font-semibold">Add</button>
+                                        )}
+                                        {!school.verified && (
+                                            <button onClick={() => onVerify(school.id)} className="text-green-600 hover:text-green-800 font-semibold">Verify</button>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -3100,7 +3147,7 @@ const SchoolModal = ({ isOpen, onClose, school, onSaveMySchool, onSaveNewSchool 
             setFormData({
                 id: school.id,
                 status: school.status,
-                notes: school.notes
+                notes: school.notes || ''
             });
         } else { // Adding a new school
             setFormData({
@@ -3113,7 +3160,7 @@ const SchoolModal = ({ isOpen, onClose, school, onSaveMySchool, onSaveNewSchool 
                 avgGRE: ''
             });
         }
-    }, [school, isOpen]);
+    }, [school, isOpen, isEditingMySchool]);
 
     if (!isOpen) return null;
 
@@ -3163,12 +3210,12 @@ const SchoolModal = ({ isOpen, onClose, school, onSaveMySchool, onSaveNewSchool 
     const renderAddNewSchoolForm = () => (
          <>
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Add New School</h2>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Suggest a New School</h2>
                  <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Add a new school to the master list. This is intended for admin/staff use.</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Thank you for contributing! Your submission will be reviewed by our team before being marked as verified.</p>
              <div className="space-y-4">
                 <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="School Name" required className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />
                 <input type="text" name="location" value={formData.location} onChange={handleChange} placeholder="Location (e.g., City, ST)" required className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" />

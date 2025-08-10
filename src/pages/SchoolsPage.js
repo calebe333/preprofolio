@@ -5,6 +5,8 @@ import { getMockData } from '../mockData';
 import LoadingScreen from '../components/LoadingScreen';
 import SchoolModal from '../components/modals/SchoolModal';
 
+// --- Helper Components for SchoolsPage ---
+
 const MySchoolsList = ({ mySchools, onEdit, onDelete, loading }) => {
     if (loading) return <LoadingScreen />;
     if (mySchools.length === 0) {
@@ -36,7 +38,7 @@ const MySchoolsList = ({ mySchools, onEdit, onDelete, loading }) => {
                     <p className="mt-4 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-md min-h-[50px]">{school.notes || 'No notes yet.'}</p>
                 </div>
                 <div className="flex justify-end gap-2 mt-4">
-                    <button onClick={() => onEdit(school)} className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">Edit</button>
+                    <button onClick={() => onEdit(school)} className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">Edit Status/Notes</button>
                     <button onClick={() => onDelete(school.id)} className="text-sm font-medium text-red-600 hover:underline dark:text-red-400">Remove</button>
                 </div>
             </div>
@@ -50,7 +52,7 @@ const MySchoolsList = ({ mySchools, onEdit, onDelete, loading }) => {
     );
 };
 
-const BrowseSchoolsList = ({ allSchools, mySchoolIds, onAdd, onAddNewSchool, onVerify, loading }) => {
+const BrowseSchoolsList = ({ allSchools, mySchoolIds, onAdd, onAddNewSchool, onEditSchool, onVerify, loading, isStaff, userId }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [programFilter, setProgramFilter] = useState('All');
 
@@ -96,7 +98,7 @@ const BrowseSchoolsList = ({ allSchools, mySchoolIds, onAdd, onAddNewSchool, onV
                             <th scope="col" className="px-6 py-3">Program</th>
                             <th scope="col" className="px-6 py-3 text-center">Avg. MCAT/DAT</th>
                             <th scope="col" className="px-6 py-3 text-center">Avg. GPA</th>
-                            <th scope="col" className="px-6 py-3">Action</th>
+                            <th scope="col" className="px-6 py-3">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -118,14 +120,15 @@ const BrowseSchoolsList = ({ allSchools, mySchoolIds, onAdd, onAddNewSchool, onV
                                 <td className="px-6 py-4 text-center">{school.avgGPA || 'N/A'}</td>
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-2">
-                                        {mySchoolIds.includes(school.id) ? (
-                                            <span className="text-sm font-semibold text-gray-500">Added</span>
-                                        ) : (
-                                            <button onClick={() => onAdd(school)} className="text-blue-600 hover:text-blue-800 font-semibold">Add</button>
+                                        {!mySchoolIds.includes(school.id) && (
+                                            <button onClick={() => onAdd(school)} className="text-blue-600 hover:text-blue-800 font-semibold">Add to My List</button>
                                         )}
-                                        {/*!school.verified && (
+                                        {isStaff && !school.verified && (
                                             <button onClick={() => onVerify(school.id)} className="text-green-600 hover:text-green-800 font-semibold">Verify</button>
-                                        )*/}
+                                        )}
+                                        {(isStaff || (!school.verified && school.submittedBy === userId)) && (
+                                            <button onClick={() => onEditSchool(school)} className="text-gray-500 hover:text-gray-700 font-semibold">Edit</button>
+                                        )}
                                     </div>
                                 </td>
                             </tr>
@@ -137,6 +140,9 @@ const BrowseSchoolsList = ({ allSchools, mySchoolIds, onAdd, onAddNewSchool, onV
     );
 };
 
+
+// --- Main SchoolsPage Component ---
+
 export default function SchoolsPage({ isGuest }) {
     const { user } = useAuth();
     const [view, setView] = useState('mySchools');
@@ -145,7 +151,20 @@ export default function SchoolsPage({ isGuest }) {
     const [loading, setLoading] = useState(true);
     const [isSchoolModalOpen, setIsSchoolModalOpen] = useState(false);
     const [editingSchool, setEditingSchool] = useState(null);
+    const [modalMode, setModalMode] = useState('add'); // 'add', 'editMySchool', 'editMaster'
+    const [isStaff, setIsStaff] = useState(false);
     const motion = window.motion;
+
+    useEffect(() => {
+        if (user) {
+            // ** SIMULATED STAFF CHECK **
+            // In a real app, you would get this from a custom claim or a 'roles' collection in Firestore.
+            const staffEmails = ['staff@preprofolio.com', 'admin@preprofolio.com'];
+            setIsStaff(staffEmails.includes(user.email));
+        } else {
+            setIsStaff(false);
+        }
+    }, [user]);
 
     useEffect(() => {
         if (isGuest) {
@@ -200,65 +219,65 @@ export default function SchoolsPage({ isGuest }) {
         const existing = await getDocs(q);
         if (existing.empty) {
             await addDoc(mySchoolsCollectionRef, newSchoolData);
-        } else {
-            console.log("School is already on the user's list.");
         }
     };
 
     const handleUpdateMySchool = async (updatedSchool) => {
         if (isGuest) {
             setMySchools(mySchools.map(s => s.id === updatedSchool.id ? updatedSchool : s));
-            setIsSchoolModalOpen(false);
-            return;
+        } else {
+            const schoolDocRef = doc(db, 'users', user.uid, 'mySchools', updatedSchool.id);
+            await updateDoc(schoolDocRef, {
+                status: updatedSchool.status,
+                notes: updatedSchool.notes,
+            });
         }
-        const schoolDocRef = doc(db, 'users', user.uid, 'mySchools', updatedSchool.id);
-        await updateDoc(schoolDocRef, {
-            status: updatedSchool.status,
-            notes: updatedSchool.notes,
-        });
         setIsSchoolModalOpen(false);
     };
     
-    const handleAddNewSchool = async (newSchoolData) => {
+    const handleSaveMasterSchool = async (schoolData) => {
         if (isGuest) {
-            const newSchool = { ...newSchoolData, id: `guest-${Date.now()}`, verified: false };
+            const newSchool = { ...schoolData, id: `guest-${Date.now()}`, verified: false };
             setAllSchools(prev => [...prev, newSchool]);
-            setIsSchoolModalOpen(false);
-            return;
+        } else {
+            if (schoolData.id) { // Editing existing school
+                const schoolDocRef = doc(db, 'schools', schoolData.id);
+                const { id, ...dataToUpdate } = schoolData;
+                await updateDoc(schoolDocRef, dataToUpdate);
+            } else { // Adding new school
+                await addDoc(collection(db, 'schools'), {
+                    ...schoolData,
+                    verified: false,
+                    submittedBy: user.uid,
+                    submittedAt: serverTimestamp(),
+                });
+            }
         }
-        await addDoc(collection(db, 'schools'), {
-            ...newSchoolData,
-            verified: false,
-            submittedBy: user.uid,
-            submittedAt: serverTimestamp(),
-        });
         setIsSchoolModalOpen(false);
     };
     
     const handleVerifySchool = async (schoolId) => {
-        if (isGuest) return;
-        const schoolDocRef = doc(db, 'schools', schoolId);
-        await updateDoc(schoolDocRef, { verified: true });
+        if (isGuest || !isStaff) return;
+        if (window.confirm("Are you sure you want to verify this school? This action cannot be undone by users.")) {
+            const schoolDocRef = doc(db, 'schools', schoolId);
+            await updateDoc(schoolDocRef, { verified: true });
+        }
     };
 
-    const handleRemoveFromMyList = async (schoolId) => {
+    const handleRemoveFromMyList = async (mySchoolId) => {
         if (isGuest) {
-            setMySchools(mySchools.filter(s => s.id !== schoolId));
+            setMySchools(mySchools.filter(s => s.id !== mySchoolId));
             return;
         }
         if (window.confirm("Are you sure you want to remove this school from your list?")) {
-            const schoolDocRef = doc(db, 'users', user.uid, 'mySchools', schoolId);
+            const schoolDocRef = doc(db, 'users', user.uid, 'mySchools', mySchoolId);
             await deleteDoc(schoolDocRef);
         }
     };
-
-    const openModalForEdit = (school) => {
-        setEditingSchool(school);
-        setIsSchoolModalOpen(true);
-    };
     
-    const openModalForNew = () => {
-        setEditingSchool(null);
+    const openModal = (mode, school = null) => {
+        setModalMode(mode);
+        setEditingSchool(school);
         setIsSchoolModalOpen(true);
     };
 
@@ -290,7 +309,7 @@ export default function SchoolsPage({ isGuest }) {
             {view === 'mySchools' && (
                 <MySchoolsList
                     mySchools={mySchools}
-                    onEdit={openModalForEdit}
+                    onEdit={(school) => openModal('editMySchool', school)}
                     onDelete={handleRemoveFromMyList}
                     loading={loading}
                 />
@@ -301,9 +320,12 @@ export default function SchoolsPage({ isGuest }) {
                     allSchools={allSchools}
                     mySchoolIds={mySchools.map(s => s.schoolId)}
                     onAdd={handleAddSchoolToList}
-                    onAddNewSchool={openModalForNew}
+                    onAddNewSchool={() => openModal('add')}
+                    onEditSchool={(school) => openModal('editMaster', school)}
                     onVerify={handleVerifySchool}
                     loading={loading}
+                    isStaff={isStaff}
+                    userId={user?.uid}
                 />
             )}
             
@@ -313,9 +335,11 @@ export default function SchoolsPage({ isGuest }) {
                         isOpen={isSchoolModalOpen}
                         onClose={() => setIsSchoolModalOpen(false)}
                         school={editingSchool}
+                        mode={modalMode}
                         onSaveMySchool={handleUpdateMySchool}
-                        onSaveNewSchool={handleAddNewSchool}
+                        onSaveMasterSchool={handleSaveMasterSchool}
                         isGuest={isGuest}
+                        isStaff={isStaff}
                     />
                 )}
             </motion.AnimatePresence>}
@@ -324,9 +348,11 @@ export default function SchoolsPage({ isGuest }) {
                     isOpen={isSchoolModalOpen}
                     onClose={() => setIsSchoolModalOpen(false)}
                     school={editingSchool}
+                    mode={modalMode}
                     onSaveMySchool={handleUpdateMySchool}
-                    onSaveNewSchool={handleAddNewSchool}
+                    onSaveMasterSchool={handleSaveMasterSchool}
                     isGuest={isGuest}
+                    isStaff={isStaff}
                 />
             )}
         </div>

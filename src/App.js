@@ -47,6 +47,8 @@ function PreProFolioApp() {
         setDarkMode(isDark);
         if (isDark) {
             document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
         }
     }, []);
 
@@ -90,7 +92,7 @@ const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) =
             setCurrentPage('dashboard');
         } else {
             try {
-                await signOut();
+                await signOut(auth);
                 setCurrentPage('dashboard');
             } catch (error) {
                 console.error("Error signing out:", error);

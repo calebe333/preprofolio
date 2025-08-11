@@ -1,6 +1,6 @@
 import React from 'react';
 
-// A redesigned helper component for displaying data points
+// A helper component for displaying data points neatly
 const InfoCard = ({ label, value, icon, className = '' }) => (
     <div className={`bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex items-start gap-4 ${className}`}>
         {icon && <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-300">{icon}</div>}
@@ -16,13 +16,59 @@ const SectionTitle = ({ children }) => (
     <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-4">{children}</h3>
 );
 
-export default function SchoolDetailModal({ isOpen, onClose, school }) {
+const PrerequisiteChecklist = ({ schoolPrereqs, userCourses }) => {
+    if (!schoolPrereqs) {
+        return <p className="text-sm text-gray-500 dark:text-gray-400">No prerequisite information available for this school.</p>;
+    }
+
+    const prereqList = schoolPrereqs.split('\n').filter(p => p.trim() !== '');
+
+    const findMatchingCourse = (prereq) => {
+        const prereqLower = prereq.toLowerCase();
+        return userCourses.find(course => {
+            const courseIdentifier = `${course.name.toLowerCase()} ${course.code.toLowerCase()}`;
+            // This is a simple keyword matching logic. It can be improved for more accuracy.
+            const keywords = prereqLower.replace(/w\/\s*lab/g, '').replace(/[i|v|1-9]/g, '').trim().split(' ');
+            return keywords.every(kw => courseIdentifier.includes(kw));
+        });
+    };
+
+    return (
+        <ul className="space-y-3">
+            {prereqList.map((prereq, index) => {
+                const matchingCourse = findMatchingCourse(prereq);
+                return (
+                    <li key={index} className="flex items-start p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div className="flex-shrink-0 mt-1">
+                            {matchingCourse ? (
+                                <svg className="h-5 w-5 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                            ) : (
+                                <svg className="h-5 w-5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                                </svg>
+                            )}
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-200">{prereq}</p>
+                            {matchingCourse && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Completed: {matchingCourse.name} ({matchingCourse.grade})</p>
+                            )}
+                        </div>
+                    </li>
+                );
+            })}
+        </ul>
+    );
+};
+
+export default function SchoolDetailModal({ isOpen, onClose, school, userCourses }) {
     const motion = window.motion;
     if (!isOpen || !school) return null;
 
     const modalContent = (
         <>
-            {/* Custom scrollbar styles */}
             <style>{`
                 .school-modal-content::-webkit-scrollbar { width: 8px; }
                 .school-modal-content::-webkit-scrollbar-track { background: transparent; }
@@ -30,7 +76,6 @@ export default function SchoolDetailModal({ isOpen, onClose, school }) {
                 .dark .school-modal-content::-webkit-scrollbar-thumb { background-color: #4b5563; }
             `}</style>
 
-            {/* Header Section */}
             <div className="p-6 sm:p-8 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex justify-between items-start">
                     <div>
@@ -55,7 +100,6 @@ export default function SchoolDetailModal({ isOpen, onClose, school }) {
                 </div>
             </div>
             
-            {/* Main Content */}
             <div className="p-6 sm:p-8 school-modal-content">
                 {school.mission && (
                     <div className="mb-8">
@@ -96,6 +140,10 @@ export default function SchoolDetailModal({ isOpen, onClose, school }) {
                             <InfoCard label="In-State Tuition" value={school.tuitionInState ? `$${Number(school.tuitionInState).toLocaleString()}` : 'N/A'} />
                             <InfoCard label="Out-of-State Tuition" value={school.tuitionOutOfState ? `$${Number(school.tuitionOutOfState).toLocaleString()}` : 'N/A'} />
                          </div>
+                    </div>
+                    <div className="lg:col-span-2 space-y-6">
+                        <SectionTitle>Prerequisite Analysis</SectionTitle>
+                        <PrerequisiteChecklist schoolPrereqs={school.prerequisites} userCourses={userCourses} />
                     </div>
                 </div>
             </div>

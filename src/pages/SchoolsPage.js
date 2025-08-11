@@ -217,7 +217,6 @@ const BrowseSchoolsList = ({ allSchools, mySchoolIds, onToggleFavorite, onAddNew
 export default function SchoolsPage({ isGuest }) {
     const { user } = useAuth();
     const [view, setView] = useState('mySchools');
-    const [browseView, setBrowseView] = useState('list');
     const [allSchools, setAllSchools] = useState([]);
     const [mySchools, setMySchools] = useState([]);
     const [userCourses, setUserCourses] = useState([]);
@@ -372,17 +371,19 @@ export default function SchoolsPage({ isGuest }) {
                         {view === 'mySchools' ? 'Manage your personal list of schools.' : 'Browse and discover new programs.'}
                     </p>
                 </div>
-                <div className="flex items-center gap-4">
-                    {view === 'browse' && (
-                        <div className="bg-gray-200 dark:bg-gray-700 p-1 rounded-lg flex">
-                            <button onClick={() => setBrowseView('list')} className={`px-3 py-1 text-sm font-semibold rounded-md ${browseView === 'list' ? 'bg-white dark:bg-gray-900 shadow' : ''}`}>List</button>
-                            <button onClick={() => setBrowseView('map')} className={`px-3 py-1 text-sm font-semibold rounded-md ${browseView === 'map' ? 'bg-white dark:bg-gray-900 shadow' : ''}`}>Map</button>
-                        </div>
-                    )}
-                    <div className="bg-gray-200 dark:bg-gray-700 p-1 rounded-lg flex">
-                        <button onClick={() => setView('mySchools')} className={`px-3 py-1 text-sm font-semibold rounded-md ${view === 'mySchools' ? 'bg-white dark:bg-gray-900 shadow' : ''}`}>My Schools</button>
-                        <button onClick={() => setView('browse')} className={`px-3 py-1 text-sm font-semibold rounded-md ${view === 'browse' ? 'bg-white dark:bg-gray-900 shadow' : ''}`}>Browse All</button>
-                    </div>
+                <div className="bg-gray-200 dark:bg-gray-700 p-1 rounded-lg flex">
+                    <button 
+                        onClick={() => setView('mySchools')}
+                        className={`px-4 py-1.5 text-sm font-semibold rounded-md ${view === 'mySchools' ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow' : 'text-gray-600 dark:text-gray-300'}`}
+                    >
+                        My Schools
+                    </button>
+                    <button 
+                        onClick={() => setView('browse')}
+                        className={`px-4 py-1.5 text-sm font-semibold rounded-md ${view === 'browse' ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow' : 'text-gray-600 dark:text-gray-300'}`}
+                    >
+                        Browse All
+                    </button>
                 </div>
             </div>
 
@@ -396,7 +397,7 @@ export default function SchoolsPage({ isGuest }) {
                 />
             )}
 
-            {view === 'browse' && browseView === 'list' && (
+            {view === 'browse' && (
                 <BrowseSchoolsList
                     allSchools={allSchools}
                     mySchoolIds={mySchools.map(s => s.schoolId)}
@@ -409,10 +410,6 @@ export default function SchoolsPage({ isGuest }) {
                     isStaff={isStaff}
                     userId={user?.uid}
                 />
-            )}
-
-            {view === 'browse' && browseView === 'map' && (
-                <MapView schools={allSchools} onViewDetails={handleViewDetails} />
             )}
             
             {isDetailModalOpen && (

@@ -21,7 +21,14 @@ export default function SchoolDetailModal({ isOpen, onClose, school }) {
         <div className="p-6 sm:p-8">
             <div className="flex justify-between items-start mb-4">
                 <div>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">{school.name}</h2>
+                    <div className="flex items-center gap-3 mb-1">
+                        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">{school.name}</h2>
+                        {school.verified ? (
+                            <span className="text-xs font-medium text-green-800 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2.5 py-1 rounded-full">Verified</span>
+                        ) : (
+                            <span className="text-xs font-medium text-yellow-800 bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-300 px-2.5 py-1 rounded-full">Unverified</span>
+                        )}
+                    </div>
                     <p className="text-md text-gray-500 dark:text-gray-400">{school.location}</p>
                     {school.website && (
                         <a href={school.website} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline dark:text-blue-400">
@@ -56,12 +63,12 @@ export default function SchoolDetailModal({ isOpen, onClose, school }) {
                     <SectionTitle>Academic Averages</SectionTitle>
                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <InfoPill label="Overall GPA" value={school.avgGPA} />
-                        {school.program === 'Pre-Med' && <InfoPill label="Science GPA (BCPM)" value={school.avgBCPM} />}
-                        {school.program === 'Pre-PA' && <InfoPill label="Science GPA" value={school.avgScienceGPA} />}
-                        {school.program === 'Pre-Med' && <InfoPill label="MCAT Score" value={school.avgMCAT} />}
-                        {school.program === 'Pre-Dental' && <InfoPill label="DAT (AA)" value={school.avgDAT_AA} />}
-                        {school.program === 'Pre-Dental' && <InfoPill label="DAT (PAT)" value={school.avgDAT_PAT} />}
-                        {school.program === 'Pre-PA' && <InfoPill label="GRE Score" value={school.avgGRE} />}
+                        {school.program === 'MD' && <InfoPill label="Science GPA (BCPM)" value={school.avgBCPM} />}
+                        {school.program === 'PA' && <InfoPill label="Science GPA" value={school.avgScienceGPA} />}
+                        {school.program === 'MD' && <InfoPill label="MCAT Score" value={school.avgMCAT} />}
+                        {school.program === 'DDS' && <InfoPill label="DAT (AA)" value={school.avgDAT_AA} />}
+                        {school.program === 'DDS' && <InfoPill label="DAT (PAT)" value={school.avgDAT_PAT} />}
+                        {school.program === 'PA' && <InfoPill label="GRE Score" value={school.avgGRE} />}
                     </div>
                 </div>
 
@@ -69,8 +76,8 @@ export default function SchoolDetailModal({ isOpen, onClose, school }) {
                     <SectionTitle>Application Requirements</SectionTitle>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <InfoPill label="Interview Format" value={school.interviewFormat} />
-                        {school.program === 'Pre-PA' && <InfoPill label="PCE Hours" value={school.pceHours ? `${school.pceHours}+` : 'N/A'} />}
-                        {school.program === 'Pre-Dental' && <InfoPill label="Shadowing Hours" value={school.shadowingHours ? `${school.shadowingHours}+` : 'N/A'} />}
+                        {school.program === 'PA' && <InfoPill label="PCE Hours" value={school.pceHours ? `${school.pceHours}+` : 'N/A'} />}
+                        {school.program === 'DDS' && <InfoPill label="Shadowing Hours" value={school.shadowingHours ? `${school.shadowingHours}+` : 'N/A'} />}
                         <InfoPill label="Secondary Fee" value={school.secondaryFee ? `$${school.secondaryFee}`: 'N/A'} />
                     </div>
                 </div>

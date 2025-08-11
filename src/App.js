@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { signOut } from './firebase';
+// Import 'auth' directly from your firebase setup file
+import { auth, signOut } from './firebase';
 
 // Import Pages
 import Dashboard from './pages/Dashboard';
@@ -92,6 +93,7 @@ const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) =
             setCurrentPage('dashboard');
         } else {
             try {
+                // The 'auth' object is now available here
                 await signOut(auth);
                 setCurrentPage('dashboard');
             } catch (error) {

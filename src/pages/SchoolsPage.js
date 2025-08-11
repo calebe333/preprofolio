@@ -4,7 +4,7 @@ import { db, collection, onSnapshot, doc, query, where, addDoc, getDocs, updateD
 import { getMockData } from '../mockData';
 import LoadingScreen from '../components/LoadingScreen';
 import SchoolModal from '../components/modals/SchoolModal';
-import SchoolDetailModal from '../components/modals/SchoolDetailModal'; // Import the new detail modal
+import SchoolDetailModal from '../components/modals/SchoolDetailModal';
 
 // --- Helper Components for SchoolsPage ---
 
@@ -53,7 +53,7 @@ const MySchoolsList = ({ mySchools, onEdit, onDelete, onViewDetails, loading }) 
     );
 };
 
-const BrowseSchoolsList = ({ allSchools, mySchoolIds, onAdd, onAddNewSchool, onEditSchool, onViewDetails, onVerify, loading, isStaff, userId }) => {
+const BrowseSchoolsList = ({ allSchools, mySchoolIds, onToggleFavorite, onAddNewSchool, onEditSchool, onViewDetails, onVerify, loading, isStaff, userId }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [programFilter, setProgramFilter] = useState('All');
 
@@ -94,6 +94,7 @@ const BrowseSchoolsList = ({ allSchools, mySchoolIds, onAdd, onAddNewSchool, onE
                 <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                      <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                         <tr>
+                            <th scope="col" className="px-6 py-3 w-12">Fav</th>
                             <th scope="col" className="px-6 py-3">School Name</th>
                             <th scope="col" className="px-6 py-3">Location</th>
                             <th scope="col" className="px-6 py-3">Program</th>
@@ -103,37 +104,50 @@ const BrowseSchoolsList = ({ allSchools, mySchoolIds, onAdd, onAddNewSchool, onE
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan="5" className="text-center p-8">Loading schools...</td></tr>
-                        ) : filteredSchools.map(school => (
-                            <tr key={school.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-                                <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                                    <button onClick={() => onViewDetails(school)} className="hover:underline text-left">
-                                        {school.name}
-                                    </button>
-                                    {school.verified ? (
-                                        <span className="ml-2 text-xs font-medium text-green-800 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-0.5 rounded-full">Verified</span>
-                                    ) : (
-                                        <span className="ml-2 text-xs font-medium text-yellow-800 bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-300 px-2 py-0.5 rounded-full">Unverified</span>
-                                    )}
-                                </td>
-                                <td className="px-6 py-4">{school.location}</td>
-                                <td className="px-6 py-4">{school.program}</td>
-                                <td className="px-6 py-4 text-center">{school.avgGPA || 'N/A'}</td>
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-2">
-                                        {!mySchoolIds.includes(school.id) && (
-                                            <button onClick={() => onAdd(school)} className="text-blue-600 hover:text-blue-800 font-semibold">Add</button>
+                            <tr><td colSpan="6" className="text-center p-8">Loading schools...</td></tr>
+                        ) : filteredSchools.map(school => {
+                            const isFavorited = mySchoolIds.includes(school.id);
+                            return (
+                                <tr key={school.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                    <td className="px-6 py-4">
+                                        <button onClick={() => onToggleFavorite(school)} title={isFavorited ? "Remove from My Schools" : "Add to My Schools"} className="text-gray-400 hover:text-yellow-500 transition-colors">
+                                            {isFavorited ? (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                </svg>
+                                            ) : (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    </td>
+                                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                                        <button onClick={() => onViewDetails(school)} className="hover:underline text-left">
+                                            {school.name}
+                                        </button>
+                                        {school.verified ? (
+                                            <span className="ml-2 text-xs font-medium text-green-800 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-0.5 rounded-full">Verified</span>
+                                        ) : (
+                                            <span className="ml-2 text-xs font-medium text-yellow-800 bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-300 px-2 py-0.5 rounded-full">Unverified</span>
                                         )}
-                                        {isStaff && !school.verified && (
-                                            <button onClick={() => onVerify(school.id)} className="text-green-600 hover:text-green-800 font-semibold">Verify</button>
-                                        )}
-                                        {(isStaff || (!school.verified && school.submittedBy === userId)) && (
-                                            <button onClick={() => onEditSchool(school)} className="text-gray-500 hover:text-gray-700 font-semibold">Edit</button>
-                                        )}
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
+                                    </td>
+                                    <td className="px-6 py-4">{school.location}</td>
+                                    <td className="px-6 py-4">{school.program}</td>
+                                    <td className="px-6 py-4 text-center">{school.avgGPA || 'N/A'}</td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            {isStaff && !school.verified && (
+                                                <button onClick={() => onVerify(school.id)} className="text-green-600 hover:text-green-800 font-semibold">Verify</button>
+                                            )}
+                                            {(isStaff || (!school.verified && school.submittedBy === userId)) && (
+                                                <button onClick={() => onEditSchool(school)} className="text-gray-500 hover:text-gray-700 font-semibold">Edit</button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            )
+                        })}
                     </tbody>
                 </table>
             </div>
@@ -190,12 +204,82 @@ export default function SchoolsPage({ isGuest }) {
             unsubscribeMySchools();
         };
     }, [user, isGuest]);
+    
+    const handleToggleFavorite = async (schoolToToggle) => {
+        if (isGuest || !user) return;
 
-    const handleAddSchoolToList = async (school) => { /* ... (no changes) ... */ };
-    const handleUpdateMySchool = async (updatedSchool) => { /* ... (no changes) ... */ };
-    const handleSaveMasterSchool = async (schoolData) => { /* ... (no changes) ... */ };
-    const handleVerifySchool = async (schoolId) => { /* ... (no changes) ... */ };
-    const handleRemoveFromMyList = async (mySchoolId) => { /* ... (no changes) ... */ };
+        const existingFavorite = mySchools.find(s => s.schoolId === schoolToToggle.id);
+
+        if (existingFavorite) {
+            const docToDeleteRef = doc(db, 'users', user.uid, 'mySchools', existingFavorite.id);
+            await deleteDoc(docToDeleteRef);
+        } else {
+            const mySchoolsCollectionRef = collection(db, 'users', user.uid, 'mySchools');
+            const newSchoolData = {
+                schoolId: schoolToToggle.id,
+                name: schoolToToggle.name,
+                location: schoolToToggle.location,
+                program: schoolToToggle.program,
+                status: 'Researching',
+                notes: '',
+                addedAt: serverTimestamp()
+            };
+            await addDoc(mySchoolsCollectionRef, newSchoolData);
+        }
+    };
+
+    const handleUpdateMySchool = async (updatedSchool) => {
+        if (isGuest) {
+            setMySchools(mySchools.map(s => s.id === updatedSchool.id ? updatedSchool : s));
+        } else {
+            const schoolDocRef = doc(db, 'users', user.uid, 'mySchools', updatedSchool.id);
+            await updateDoc(schoolDocRef, {
+                status: updatedSchool.status,
+                notes: updatedSchool.notes,
+            });
+        }
+        setIsSchoolModalOpen(false);
+    };
+    
+    const handleSaveMasterSchool = async (schoolData) => {
+        if (isGuest) {
+            const newSchool = { ...schoolData, id: `guest-${Date.now()}`, verified: false };
+            setAllSchools(prev => [...prev, newSchool]);
+        } else {
+            if (schoolData.id) {
+                const schoolDocRef = doc(db, 'schools', schoolData.id);
+                const { id, ...dataToUpdate } = schoolData;
+                await updateDoc(schoolDocRef, dataToUpdate);
+            } else {
+                await addDoc(collection(db, 'schools'), {
+                    ...schoolData,
+                    verified: false,
+                    submittedBy: user.uid,
+                    submittedAt: serverTimestamp(),
+                });
+            }
+        }
+        setIsSchoolModalOpen(false);
+    };
+    
+    const handleVerifySchool = async (schoolId) => {
+        if (isGuest || !isStaff) return;
+        if (window.confirm("Are you sure you want to verify this school? This action cannot be undone by users.")) {
+            const schoolDocRef = doc(db, 'schools', schoolId);
+            await updateDoc(schoolDocRef, { verified: true });
+        }
+    };
+
+    const handleRemoveFromMyList = async (mySchoolId) => {
+        if (isGuest) {
+            setMySchools(mySchools.filter(s => s.id !== mySchoolId));
+            return;
+        }
+        if (window.confirm("Are you sure you want to remove this school from your list?")) {
+            const schoolDocRef = doc(db, 'users', user.uid, 'mySchools', mySchoolId);
+            await deleteDoc(schoolDocRef);
+        }
+    };
     
     const openEditModal = (mode, school = null) => {
         setModalMode(mode);
@@ -204,14 +288,9 @@ export default function SchoolsPage({ isGuest }) {
     };
 
     const handleViewDetails = (schoolOrId) => {
-        let schoolData;
-        if (typeof schoolOrId === 'string') {
-            // If it's an ID (from MySchoolsList), find the full data
-            schoolData = allSchools.find(s => s.id === schoolOrId);
-        } else {
-            // If it's the full object (from BrowseSchoolsList)
-            schoolData = schoolOrId;
-        }
+        let schoolData = typeof schoolOrId === 'string'
+            ? allSchools.find(s => s.id === schoolOrId)
+            : schoolOrId;
         setSelectedSchool(schoolData);
         setIsDetailModalOpen(true);
     };
@@ -255,7 +334,7 @@ export default function SchoolsPage({ isGuest }) {
                 <BrowseSchoolsList
                     allSchools={allSchools}
                     mySchoolIds={mySchools.map(s => s.schoolId)}
-                    onAdd={handleAddSchoolToList}
+                    onToggleFavorite={handleToggleFavorite}
                     onAddNewSchool={() => openEditModal('add')}
                     onEditSchool={(school) => openEditModal('editMaster', school)}
                     onViewDetails={handleViewDetails}
@@ -267,17 +346,8 @@ export default function SchoolsPage({ isGuest }) {
             )}
             
             {/* Detail Modal */}
-            {motion && <motion.AnimatePresence>
-                {isDetailModalOpen && (
-                    <SchoolDetailModal 
-                        isOpen={isDetailModalOpen}
-                        onClose={() => setIsDetailModalOpen(false)}
-                        school={selectedSchool}
-                    />
-                )}
-            </motion.AnimatePresence>}
-            {!motion && isDetailModalOpen && (
-                 <SchoolDetailModal 
+            {isDetailModalOpen && (
+                <SchoolDetailModal 
                     isOpen={isDetailModalOpen}
                     onClose={() => setIsDetailModalOpen(false)}
                     school={selectedSchool}
@@ -285,22 +355,8 @@ export default function SchoolsPage({ isGuest }) {
             )}
 
             {/* Edit/Add Modal */}
-            {motion && <motion.AnimatePresence>
-                {isSchoolModalOpen && (
-                    <SchoolModal 
-                        isOpen={isSchoolModalOpen}
-                        onClose={() => setIsSchoolModalOpen(false)}
-                        school={selectedSchool}
-                        mode={modalMode}
-                        onSaveMySchool={handleUpdateMySchool}
-                        onSaveMasterSchool={handleSaveMasterSchool}
-                        isGuest={isGuest}
-                        isStaff={isStaff}
-                    />
-                )}
-            </motion.AnimatePresence>}
-            {!motion && isSchoolModalOpen && (
-                 <SchoolModal 
+            {isSchoolModalOpen && (
+                <SchoolModal 
                     isOpen={isSchoolModalOpen}
                     onClose={() => setIsSchoolModalOpen(false)}
                     school={selectedSchool}

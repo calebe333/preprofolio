@@ -126,6 +126,7 @@ const BrowseSchoolsList = ({ allSchools, mySchoolIds, onAdd, onAddNewSchool, onE
                                         {isStaff && !school.verified && (
                                             <button onClick={() => onVerify(school.id)} className="text-green-600 hover:text-green-800 font-semibold">Verify</button>
                                         )}
+                                        {/* Staff can edit any school. Regular users can only edit unverified schools they submitted. */}
                                         {(isStaff || (!school.verified && school.submittedBy === userId)) && (
                                             <button onClick={() => onEditSchool(school)} className="text-gray-500 hover:text-gray-700 font-semibold">Edit</button>
                                         )}
@@ -152,19 +153,9 @@ export default function SchoolsPage({ isGuest }) {
     const [isSchoolModalOpen, setIsSchoolModalOpen] = useState(false);
     const [editingSchool, setEditingSchool] = useState(null);
     const [modalMode, setModalMode] = useState('add'); // 'add', 'editMySchool', 'editMaster'
-    const [isStaff, setIsStaff] = useState(false);
     const motion = window.motion;
 
-    useEffect(() => {
-        if (user) {
-            // ** SIMULATED STAFF CHECK **
-            // In a real app, you would get this from a custom claim or a 'roles' collection in Firestore.
-            const staffEmails = ['staff@preprofolio.com', 'admin@preprofolio.com'];
-            setIsStaff(staffEmails.includes(user.email));
-        } else {
-            setIsStaff(false);
-        }
-    }, [user]);
+    const isStaff = user?.role === 'staff';
 
     useEffect(() => {
         if (isGuest) {

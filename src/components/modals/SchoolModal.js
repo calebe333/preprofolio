@@ -12,8 +12,7 @@ export default function SchoolModal({ isOpen, onClose, school, mode, onSaveMySch
             name: '', location: '', program: 'MD', avgGPA: '',
             website: '', mission: '', classSize: '', acceptanceRate: '', deadline: '',
             tuitionInState: '', tuitionOutOfState: '', interviewFormat: '', secondaryFee: '',
-            prerequisites: '', // New field for prerequisites
-            // Program specific fields
+            prerequisites: '',
             avgMCAT: '', avgBCPM: '',
             avgScienceGPA: '', pceHours: '', avgGRE: '',
             avgDAT_AA: '', avgDAT_PAT: '', shadowingHours: ''
@@ -94,15 +93,15 @@ export default function SchoolModal({ isOpen, onClose, school, mode, onSaveMySch
             {mode === 'add' && <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Your submission will be marked as "unverified" until reviewed by staff.</p>}
             
             <div className="space-y-4">
-                {/* General Info */}
                 <h3 className="font-semibold border-b pt-4">General Information</h3>
                 <input type="text" name="name" value={formData.name || ''} onChange={handleChange} placeholder="School Name" required readOnly={isReadOnly} className="input-class" />
-                {/* ... other general info fields ... */}
+                <input type="text" name="location" value={formData.location || ''} onChange={handleChange} placeholder="Location (e.g., City, ST)" required readOnly={isReadOnly} className="input-class" />
+                <input type="url" name="website" value={formData.website || ''} onChange={handleChange} placeholder="https://school.edu" readOnly={isReadOnly} className="input-class" />
+                <textarea name="mission" value={formData.mission || ''} onChange={handleChange} placeholder="Mission Statement" readOnly={isReadOnly} className="input-class" rows="3"></textarea>
                 <select name="program" value={formData.program} onChange={handleChange} disabled={isReadOnly} className="input-class">
                     <option value="MD">MD</option><option value="PA">PA</option><option value="DDS">DDS</option>
                 </select>
 
-                {/* Prerequisites */}
                 <h3 className="font-semibold border-b pt-4">Prerequisites</h3>
                 <textarea 
                     name="prerequisites" 
@@ -114,17 +113,30 @@ export default function SchoolModal({ isOpen, onClose, school, mode, onSaveMySch
                     rows="6"
                 ></textarea>
 
-                {/* Admissions Info */}
                 <h3 className="font-semibold border-b pt-4">Admissions Data</h3>
-                {/* ... other admissions fields ... */}
+                <div className="grid grid-cols-2 gap-4">
+                    <input type="number" name="classSize" value={formData.classSize || ''} onChange={handleChange} placeholder="Class Size" readOnly={isReadOnly} className="input-class" />
+                    <input type="number" name="acceptanceRate" value={formData.acceptanceRate || ''} onChange={handleChange} placeholder="Acceptance Rate (%)" step="0.1" readOnly={isReadOnly} className="input-class" />
+                    <input type="date" name="deadline" value={formData.deadline || ''} onChange={handleChange} readOnly={isReadOnly} className="input-class" />
+                    <input type="text" name="interviewFormat" value={formData.interviewFormat || ''} onChange={handleChange} placeholder="Interview Format (MMI, etc.)" readOnly={isReadOnly} className="input-class" />
+                </div>
 
-                {/* Program-Specific Averages */}
                 <h3 className="font-semibold border-b pt-4">Academic Averages</h3>
-                {/* ... other academic fields ... */}
+                <input type="number" name="avgGPA" value={formData.avgGPA || ''} onChange={handleChange} placeholder="Average Overall GPA" step="0.01" readOnly={isReadOnly} className="input-class" />
+                {formData.program === 'MD' && <input type="number" name="avgBCPM" value={formData.avgBCPM || ''} onChange={handleChange} placeholder="Average BCPM GPA" step="0.01" readOnly={isReadOnly} className="input-class" />}
+                {formData.program === 'PA' && <input type="number" name="avgScienceGPA" value={formData.avgScienceGPA || ''} onChange={handleChange} placeholder="Average Science GPA" step="0.01" readOnly={isReadOnly} className="input-class" />}
+                {formData.program === 'MD' && <input type="number" name="avgMCAT" value={formData.avgMCAT || ''} onChange={handleChange} placeholder="Average MCAT" readOnly={isReadOnly} className="input-class" />}
+                {formData.program === 'DDS' && <><input type="number" name="avgDAT_AA" value={formData.avgDAT_AA || ''} onChange={handleChange} placeholder="Avg DAT (Academic Average)" readOnly={isReadOnly} className="input-class" /><input type="number" name="avgDAT_PAT" value={formData.avgDAT_PAT || ''} onChange={handleChange} placeholder="Avg DAT (Perceptual)" readOnly={isReadOnly} className="input-class" /></>}
+                {formData.program === 'PA' && <input type="number" name="avgGRE" value={formData.avgGRE || ''} onChange={handleChange} placeholder="Average GRE" readOnly={isReadOnly} className="input-class" />}
                 
-                {/* Requirements & Fees */}
                 <h3 className="font-semibold border-b pt-4">Requirements & Fees</h3>
-                {/* ... other requirements fields ... */}
+                <div className="grid grid-cols-2 gap-4">
+                    {formData.program === 'PA' && <input type="number" name="pceHours" value={formData.pceHours || ''} onChange={handleChange} placeholder="Minimum PCE Hours" readOnly={isReadOnly} className="input-class" />}
+                    {formData.program === 'DDS' && <input type="number" name="shadowingHours" value={formData.shadowingHours || ''} onChange={handleChange} placeholder="Recommended Shadowing Hours" readOnly={isReadOnly} className="input-class" />}
+                    <input type="number" name="secondaryFee" value={formData.secondaryFee || ''} onChange={handleChange} placeholder="Secondary App Fee ($)" readOnly={isReadOnly} className="input-class" />
+                    <input type="number" name="tuitionInState" value={formData.tuitionInState || ''} onChange={handleChange} placeholder="In-State Tuition ($)" readOnly={isReadOnly} className="input-class" />
+                    <input type="number" name="tuitionOutOfState" value={formData.tuitionOutOfState || ''} onChange={handleChange} placeholder="Out-of-State Tuition ($)" readOnly={isReadOnly} className="input-class" />
+                </div>
             </div>
         </>
     );

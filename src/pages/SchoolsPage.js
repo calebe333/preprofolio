@@ -29,16 +29,16 @@ const MySchoolsList = ({ mySchools, onEdit, onDelete, onViewDetails, loading }) 
             'Rejected': 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
         };
         return (
-            <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-lg flex flex-col justify-between transition-shadow duration-300 hover:shadow-xl">
-                <div>
-                    <div className="flex justify-between items-start">
-                        <button onClick={() => onViewDetails(school.schoolId)} className="text-lg font-bold text-gray-900 dark:text-white text-left hover:underline">{school.name}</button>
-                        <span className={`text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full ${statusColors[school.status] || 'bg-gray-100 text-gray-800'}`}>{school.status}</span>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 border border-transparent hover:border-blue-500/50">
+                <div className="p-6">
+                    <div className="flex justify-between items-start mb-2">
+                        <button onClick={() => onViewDetails(school.schoolId)} className="text-lg font-bold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors pr-4">{school.name}</button>
+                        <span className={`text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full ${statusColors[school.status] || 'bg-gray-100 text-gray-800'}`}>{school.status}</span>
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{school.location} - {school.program}</p>
-                    <p className="mt-4 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-md min-h-[50px]">{school.notes || 'No notes yet.'}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{school.location} - {school.program}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-md min-h-[50px]">{school.notes || 'No notes yet.'}</p>
                 </div>
-                <div className="flex justify-end items-center gap-4 mt-4">
+                <div className="flex justify-between items-center gap-4 mt-2 bg-gray-50 dark:bg-gray-800/50 px-6 py-3 rounded-b-2xl border-t border-gray-100 dark:border-gray-700">
                     <button onClick={() => onEdit(school)} className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">Edit Status/Notes</button>
                     <button onClick={() => onDelete(school.id)} title="Remove from My Schools" className="text-gray-400 hover:text-yellow-500 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
@@ -69,8 +69,8 @@ const BrowseSchoolsList = ({ allSchools, mySchoolIds, onToggleFavorite, onAddNew
     });
 
     return (
-        <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-lg">
-            <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+        <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-lg">
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                 <div className="flex-grow flex gap-2 w-full sm:w-auto">
                     <input 
                         type="text"
@@ -90,7 +90,7 @@ const BrowseSchoolsList = ({ allSchools, mySchoolIds, onToggleFavorite, onAddNew
                         <option value="DDS">DDS</option>
                     </select>
                 </div>
-                <button onClick={onAddNewSchool} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 w-full sm:w-auto">
+                <button onClick={onAddNewSchool} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center gap-2 w-full sm:w-auto transition-transform hover:scale-105">
                     Suggest New School
                 </button>
             </div>
@@ -112,9 +112,9 @@ const BrowseSchoolsList = ({ allSchools, mySchoolIds, onToggleFavorite, onAddNew
                         ) : filteredSchools.map(school => {
                             const isFavorited = mySchoolIds.includes(school.id);
                             return (
-                                <tr key={school.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                <tr key={school.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                     <td className="px-6 py-4">
-                                        <button onClick={() => onToggleFavorite(school)} title={isFavorited ? "Remove from My Schools" : "Add to My Schools"} className="text-gray-400 hover:text-yellow-500 transition-colors">
+                                        <button onClick={() => onToggleFavorite(school)} title={isFavorited ? "Remove from My Schools" : "Add to My Schools"} className="text-gray-400 hover:text-yellow-500 transition-transform hover:scale-125">
                                             {isFavorited ? (
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
                                                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
@@ -127,7 +127,7 @@ const BrowseSchoolsList = ({ allSchools, mySchoolIds, onToggleFavorite, onAddNew
                                         </button>
                                     </td>
                                     <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                                        <button onClick={() => onViewDetails(school)} className="hover:underline text-left">
+                                        <button onClick={() => onViewDetails(school)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left">
                                             {school.name}
                                         </button>
                                         {school.verified ? (
@@ -140,7 +140,7 @@ const BrowseSchoolsList = ({ allSchools, mySchoolIds, onToggleFavorite, onAddNew
                                     <td className="px-6 py-4">{school.program}</td>
                                     <td className="px-6 py-4 text-center">{school.avgGPA || 'N/A'}</td>
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-4">
                                             {isStaff && !school.verified && (
                                                 <button onClick={() => onVerify(school.id)} className="text-green-600 hover:text-green-800 font-semibold">Verify</button>
                                             )}
@@ -191,7 +191,7 @@ export default function SchoolsPage({ isGuest }) {
         }
 
         const schoolsCollectionRef = collection(db, 'schools');
-        const unsubscribeSchools = onSnapshot(schoolsCollectionRef, (snapshot) => {
+        const unsubscribeSchools = onSnapshot(query(schoolsCollectionRef, orderBy("name", "asc")), (snapshot) => {
             const schoolsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAllSchools(schoolsData);
             setLoading(false);

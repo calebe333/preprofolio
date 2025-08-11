@@ -129,6 +129,3 @@ export default function SchoolModal({ isOpen, onClose, school, mode, onSaveMySch
         </div>
     );
 };
-```
-
-Now your `SchoolsPage` is fully equipped for crowdsourcing data with staff verification. Let me know what you'd like to work on ne

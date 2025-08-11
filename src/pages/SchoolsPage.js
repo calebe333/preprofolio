@@ -167,6 +167,7 @@ export default function SchoolsPage({ isGuest }) {
     const [view, setView] = useState('mySchools');
     const [allSchools, setAllSchools] = useState([]);
     const [mySchools, setMySchools] = useState([]);
+    const [userCourses, setUserCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isSchoolModalOpen, setIsSchoolModalOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -181,6 +182,7 @@ export default function SchoolsPage({ isGuest }) {
             const mock = getMockData();
             setAllSchools(mock.allSchools);
             setMySchools(mock.mySchools);
+            setUserCourses(mock.courses);
             setLoading(false);
             return;
         }
@@ -203,9 +205,15 @@ export default function SchoolsPage({ isGuest }) {
             setMySchools(userSchools);
         });
 
+        const coursesQuery = query(collection(db, "courses"), where("userId", "==", user.uid));
+        const unsubscribeCourses = onSnapshot(coursesQuery, (snapshot) => {
+            setUserCourses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+
         return () => {
             unsubscribeSchools();
             unsubscribeMySchools();
+            unsubscribeCourses();
         };
     }, [user, isGuest]);
     
@@ -354,6 +362,7 @@ export default function SchoolsPage({ isGuest }) {
                     isOpen={isDetailModalOpen}
                     onClose={() => setIsDetailModalOpen(false)}
                     school={selectedSchool}
+                    userCourses={userCourses} 
                 />
             )}
 

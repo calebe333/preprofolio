@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { db, collection, onSnapshot, doc, query, where, addDoc, getDocs, updateDoc, deleteDoc, serverTimestamp } from '../firebase';
+import { db, collection, onSnapshot, doc, query, where, addDoc, getDocs, updateDoc, deleteDoc, serverTimestamp, orderBy } from '../firebase';
 import { getMockData } from '../mockData';
 import LoadingScreen from '../components/LoadingScreen';
 import SchoolModal from '../components/modals/SchoolModal';

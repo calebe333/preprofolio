@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-// Import 'auth' directly from your firebase setup file
 import { auth, signOut } from './firebase';
 
 // Import Pages
@@ -9,6 +8,7 @@ import ExperiencesPage from './pages/ExperiencesPage';
 import CoursesPage from './pages/CoursesPage';
 import SchoolsPage from './pages/SchoolsPage';
 import TimelinePage from './pages/TimelinePage';
+import CommunityPage from './pages/CommunityPage';
 import ExportPage from './pages/ExportPage';
 import SettingsPage from './pages/SettingsPage';
 import LoginScreen from './pages/LoginScreen';
@@ -32,15 +32,20 @@ function PreProFolioApp() {
     const { user, loading } = useAuth();
     const [currentPage, setCurrentPage] = useState('dashboard');
 
-    // Dynamically load external scripts
+    // Dynamically load external scripts like Framer Motion and Leaflet
     useEffect(() => {
-        const scriptSrc = 'https://cdn.jsdelivr.net/npm/framer-motion@10/dist/framer-motion.umd.js';
-        if (!document.querySelector(`script[src="${scriptSrc}"]`)) {
-            const script = document.createElement('script');
-            script.src = scriptSrc;
-            script.async = true;
-            document.body.appendChild(script);
-        }
+        const scripts = [
+            'https://cdn.jsdelivr.net/npm/framer-motion@10/dist/framer-motion.umd.js',
+            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+        ];
+        scripts.forEach(scriptSrc => {
+            if (!document.querySelector(`script[src="${scriptSrc}"]`)) {
+                const script = document.createElement('script');
+                script.src = scriptSrc;
+                script.async = true;
+                document.body.appendChild(script);
+            }
+        });
     }, []);
 
     useEffect(() => {
@@ -93,7 +98,6 @@ const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) =
             setCurrentPage('dashboard');
         } else {
             try {
-                // The 'auth' object is now available here
                 await signOut(auth);
                 setCurrentPage('dashboard');
             } catch (error) {
@@ -118,6 +122,8 @@ const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) =
                 return <SchoolsPage isGuest={isGuest} />;
             case 'timeline':
                 return <TimelinePage isGuest={isGuest} />;
+            case 'community':
+                return <CommunityPage isGuest={isGuest} />;
             case 'export':
                 return <ExportPage isGuest={isGuest} />;
             case 'settings':

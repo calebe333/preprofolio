@@ -1,4 +1,4 @@
-import React, 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from '../firebase';
 import LoadingScreen from '../components/LoadingScreen';
@@ -34,18 +34,18 @@ const ChatMessage = ({ message, isCurrentUser }) => {
 // --- Main Community Page Component ---
 export default function CommunityPage({ isGuest }) {
     const { user } = useAuth();
-    const [messages, setMessages] = React.useState([]);
-    const [newMessage, setNewMessage] = React.useState('');
-    const [loading, setLoading] = React.useState(true);
-    const chatEndRef = React.useRef(null);
+    const [messages, setMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [loading, setLoading] = useState(true);
+    const chatEndRef = useRef(null);
 
     // Scroll to the bottom of the chat on new messages
-    React.useEffect(() => {
+    useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
     // Fetch chat messages from Firestore in real-time
-    React.useEffect(() => {
+    useEffect(() => {
         if (isGuest) {
             // Show mock data for guests
             setMessages([

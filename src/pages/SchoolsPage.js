@@ -245,7 +245,7 @@ export default function SchoolsPage({ isGuest }) {
             return;
         }
 
-        const schoolsUnsubscribe = onSnapshot(query(collection(db, 'schools')), (snapshot) => {
+        const schoolsUnsubscribe = onSnapshot(query(collection(db, 'schools'), orderBy("name", "asc")), (snapshot) => {
             setAllSchools(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             setLoading(false);
         });

@@ -8,7 +8,7 @@ import ExperiencesPage from './pages/ExperiencesPage';
 import CoursesPage from './pages/CoursesPage';
 import SchoolsPage from './pages/SchoolsPage';
 import TimelinePage from './pages/TimelinePage';
-import CommunityPage from './pages/CommunityPage';
+// CommunityPage import removed
 import ExportPage from './pages/ExportPage';
 import SettingsPage from './pages/SettingsPage';
 import LoginScreen from './pages/LoginScreen';
@@ -32,7 +32,7 @@ function PreProFolioApp() {
     const { user, loading } = useAuth();
     const [currentPage, setCurrentPage] = useState('dashboard');
 
-    // Dynamically load external scripts like Framer Motion and Leaflet
+    // Dynamically load external scripts
     useEffect(() => {
         const scripts = [
             'https://cdn.jsdelivr.net/npm/framer-motion@10/dist/framer-motion.umd.js',
@@ -122,8 +122,7 @@ const AppContent = ({ darkMode, toggleDarkMode, currentPage, setCurrentPage }) =
                 return <SchoolsPage isGuest={isGuest} />;
             case 'timeline':
                 return <TimelinePage isGuest={isGuest} />;
-            case 'community':
-                return <CommunityPage isGuest={isGuest} />;
+            // case 'community' removed
             case 'export':
                 return <ExportPage isGuest={isGuest} />;
             case 'settings':

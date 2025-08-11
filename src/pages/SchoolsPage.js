@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db, collection, onSnapshot, doc, query, where, addDoc, getDocs, updateDoc, deleteDoc, serverTimestamp, orderBy } from '../firebase';
 import { getMockData } from '../mockData';
@@ -60,13 +60,68 @@ const MySchoolsList = ({ mySchools, onEdit, onDelete, onViewDetails, loading }) 
 const BrowseSchoolsList = ({ allSchools, mySchoolIds, onToggleFavorite, onAddNewSchool, onEditSchool, onViewDetails, onVerify, loading, isStaff, userId }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [programFilter, setProgramFilter] = useState('All');
+    const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'ascending' });
 
-    const filteredSchools = allSchools.filter(school => {
-        const nameMatch = school.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const locationMatch = school.location.toLowerCase().includes(searchTerm.toLowerCase());
-        const programMatch = programFilter === 'All' || school.program === programFilter;
-        return (nameMatch || locationMatch) && programMatch;
-    });
+    const filteredSchools = useMemo(() => {
+        return allSchools.filter(school => {
+            const nameMatch = school.name.toLowerCase().includes(searchTerm.toLowerCase());
+            const locationMatch = school.location.toLowerCase().includes(searchTerm.toLowerCase());
+            const programMatch = programFilter === 'All' || school.program === programFilter;
+            return (nameMatch || locationMatch) && programMatch;
+        });
+    }, [allSchools, searchTerm, programFilter]);
+
+    const sortedSchools = useMemo(() => {
+        let sortableItems = [...filteredSchools];
+        if (sortConfig.key !== null) {
+            sortableItems.sort((a, b) => {
+                const valA = a[sortConfig.key];
+                const valB = b[sortConfig.key];
+
+                // Handle numbers and strings that might be numbers
+                const numA = parseFloat(valA);
+                const numB = parseFloat(valB);
+
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    if (numA < numB) return sortConfig.direction === 'ascending' ? -1 : 1;
+                    if (numA > numB) return sortConfig.direction === 'ascending' ? 1 : -1;
+                    return 0;
+                }
+                
+                // Handle cases where one value is not a number (e.g., 'N/A')
+                if (isNaN(numA) && !isNaN(numB)) return 1;
+                if (!isNaN(numA) && isNaN(numB)) return -1;
+
+                // Handle strings
+                if (valA < valB) return sortConfig.direction === 'ascending' ? -1 : 1;
+                if (valA > valB) return sortConfig.direction === 'ascending' ? 1 : -1;
+                return 0;
+            });
+        }
+        return sortableItems;
+    }, [filteredSchools, sortConfig]);
+
+    const requestSort = (key) => {
+        let direction = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const SortableHeader = ({ label, sortKey }) => {
+        const isActive = sortConfig.key === sortKey;
+        return (
+            <th scope="col" className="px-6 py-3">
+                <button onClick={() => requestSort(sortKey)} className="flex items-center gap-2 group">
+                    {label}
+                    <span className={`transition-opacity ${isActive ? 'opacity-100' : 'opacity-20 group-hover:opacity-100'}`}>
+                        {isActive && sortConfig.direction === 'ascending' ? '▲' : '▼'}
+                    </span>
+                </button>
+            </th>
+        );
+    };
 
     return (
         <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-lg">
@@ -99,17 +154,17 @@ const BrowseSchoolsList = ({ allSchools, mySchoolIds, onToggleFavorite, onAddNew
                      <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                         <tr>
                             <th scope="col" className="px-6 py-3 w-12">Fav</th>
-                            <th scope="col" className="px-6 py-3">School Name</th>
+                            <SortableHeader label="School Name" sortKey="name" />
                             <th scope="col" className="px-6 py-3">Location</th>
                             <th scope="col" className="px-6 py-3">Program</th>
-                            <th scope="col" className="px-6 py-3 text-center">Avg. GPA</th>
+                            <SortableHeader label="Avg. GPA" sortKey="avgGPA" />
                             <th scope="col" className="px-6 py-3">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
                             <tr><td colSpan="6" className="text-center p-8">Loading schools...</td></tr>
-                        ) : filteredSchools.map(school => {
+                        ) : sortedSchools.map(school => {
                             const isFavorited = mySchoolIds.includes(school.id);
                             return (
                                 <tr key={school.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">

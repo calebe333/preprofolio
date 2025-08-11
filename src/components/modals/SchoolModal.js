@@ -12,11 +12,8 @@ export default function SchoolModal({ isOpen, onClose, school, mode, onSaveMySch
             name: '', location: '', program: 'MD', avgGPA: '',
             website: '', mission: '', classSize: '', acceptanceRate: '', deadline: '',
             tuitionInState: '', tuitionOutOfState: '', interviewFormat: '', secondaryFee: '',
-            // Pre-Med
             avgMCAT: '', avgBCPM: '',
-            // Pre-PA
             avgScienceGPA: '', pceHours: '', avgGRE: '',
-            // Pre-Dental
             avgDAT_AA: '', avgDAT_PAT: '', shadowingHours: ''
         };
 
@@ -60,18 +57,39 @@ export default function SchoolModal({ isOpen, onClose, school, mode, onSaveMySch
             setIsSubmitting(false);
         }
     };
+
+    // --- ADDED THIS MISSING FUNCTION ---
+    const getTitle = () => {
+        if (mode === 'editMySchool') return school.name;
+        if (mode === 'editMaster') return 'Edit School Information';
+        return 'Suggest a New School';
+    };
+    // ------------------------------------
     
     const renderMySchoolForm = () => (
         <>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{school.name}</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Update your personal application status and notes for this school.</p>
-            {/* ... (rest of the 'My School' form JSX is unchanged) ... */}
+            <div className="space-y-4">
+                <div>
+                    <label className="block mb-2 text-sm font-medium">Application Status</label>
+                    <select name="status" value={formData.status} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
+                        <option>Researching</option>
+                        <option>Applying</option>
+                        <option>Interviewing</option>
+                        <option>Accepted</option>
+                        <option>Rejected</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block mb-2 text-sm font-medium">My Notes</label>
+                    <textarea name="notes" value={formData.notes || ''} onChange={handleChange} rows="4" placeholder="e.g., Spoke with Dr. Smith at the conference..." className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600"></textarea>
+                </div>
+            </div>
         </>
     );
 
     const renderMasterSchoolForm = () => (
         <>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{mode === 'add' ? 'Suggest a New School' : 'Edit School Information'}</h2>
             {isReadOnly && <p className="text-sm text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/50 p-3 rounded-md my-4">This school is verified and can no longer be edited by users.</p>}
             {mode === 'add' && <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Your submission will be marked as "unverified" until reviewed by staff.</p>}
             
